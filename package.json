@@ -1,11 +1,10 @@
 {
-    "name": "zamonaviy-imo-ishora-tarjimoni",
+    "name": "sign-language-ai",
     "version": "1.0.0",
-    "description": "Zamonaviy Imo-ishora AI Tarjimoni",
+    "description": "Imo-ishora AI tarjimon",
     "main": "server.js",
     "scripts": {
-        "start": "node server.js",
-        "dev": "node --watch server.js"
+        "start": "node server.js"
     },
     "dependencies": {
         "express": "^4.18.2",

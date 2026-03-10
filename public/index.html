@@ -4,231 +4,439 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zamonaviy Imo-ishora AI | 🤟</title>
+    <title>Imo-ishora AI | Ikki tomonlama tarjimon</title>
     <style>
-        :root {
-            --primary: #00d2ff;
-            --secondary: #3a7bd5;
-            --bg-dark: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --text: #f8fafc;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             min-height: 100vh;
-            color: var(--text);
-            overflow-x: hidden;
+            color: white;
         }
 
+        /* Navbar */
         .navbar {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(12px);
-            padding: 1.2rem 2rem;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
             position: sticky;
             top: 0;
             z-index: 1000;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            background: linear-gradient(to right, var(--primary), var(--secondary));
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .nav-links {
             display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .main-container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1.5rem;
-        }
-
-        .hero {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        .hero h1 {
-            font-size: 3.5rem;
-            margin-bottom: 1rem;
-            letter-spacing: -0.02em;
-        }
-
-        .hero p {
-            color: #94a3b8;
-            font-size: 1.1rem;
-        }
-
-        .mode-switcher {
-            display: flex;
-            justify-content: center;
-            gap: 1rem;
-            margin-bottom: 2.5rem;
-        }
-
-        .mode-btn {
-            background: var(--card-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 0.8rem 2rem;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .mode-btn.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            box-shadow: 0 8px 20px rgba(0, 210, 255, 0.3);
-            border-color: transparent;
-        }
-
-        .translator-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 2rem;
         }
 
-        .card {
-            background: var(--card-bg);
-            border-radius: 24px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            transition: all 0.3s;
         }
 
-        .video-wrapper {
-            position: relative;
-            border-radius: 16px;
-            overflow: hidden;
-            aspect-ratio: 16/9;
-            background: #000;
+        .nav-links a:hover,
+        .nav-links a.active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #ccc;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        /* Mode Selector */
+        .mode-selector {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .mode-btn {
+            padding: 1rem 3rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            border: none;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+        }
+
+        /* Translator Grid */
+        .translator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        /* Card */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
             margin-bottom: 1.5rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-subtitle {
+            color: #aaa;
+            font-size: 0.9rem;
+        }
+
+        /* Video Container */
+        .video-container {
+            position: relative;
+            width: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+            margin-bottom: 1rem;
             border: 2px solid rgba(255, 255, 255, 0.1);
         }
 
-        #videoInput,
-        #outputCanvas {
+        #videoElement,
+        #canvasElement {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
 
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            padding: 0.4rem 1rem;
-            border-radius: 99px;
-            font-size: 0.85rem;
-            margin-bottom: 1rem;
-        }
-
-        .result-panel {
-            background: rgba(15, 23, 42, 0.5);
-            border-radius: 16px;
-            padding: 1.5rem;
-            min-height: 120px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .result-text {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary);
-        }
-
+        /* Controls */
         .controls {
             display: flex;
             gap: 1rem;
-            margin-top: 1.5rem;
+            margin: 1rem 0;
         }
 
         .btn {
-            flex: 1;
-            padding: 1rem;
-            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
             border: none;
-            font-weight: bold;
+            border-radius: 50px;
+            font-weight: 600;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all 0.3s;
+            font-size: 1rem;
         }
 
-        .btn-start {
-            background: #10b981;
+        .btn-primary {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             color: white;
         }
 
-        .btn-stop {
-            background: #ef4444;
+        .btn-danger {
+            background: #ff4757;
             color: white;
         }
 
-        .avatar-view {
-            height: 300px;
-            background: linear-gradient(to bottom, #1e293b, #0f172a);
-            border-radius: 16px;
+        .btn-success {
+            background: #00b894;
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #00d2ff;
+            color: #00d2ff;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+        }
+
+        /* Translation Panel */
+        .translation-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .translation-text {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+            color: #00d2ff;
+        }
+
+        .translation-desc {
+            color: #ccc;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        /* Sign Display */
+        .sign-display {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 1rem 0;
+        }
+
+        .sign-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .sign-emoji {
+            font-size: 2rem;
+        }
+
+        .sign-word {
+            font-size: 0.9rem;
+            color: #ccc;
+        }
+
+        /* Avatar Container */
+        .avatar-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .avatar-3d {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 8rem;
+            font-size: 5rem;
             position: relative;
+            overflow: hidden;
+        }
+
+        .avatar-hands {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .hand {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        /* Voice Indicator */
+        .voice-indicator {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50px;
         }
 
         .voice-wave {
+            flex: 1;
+            height: 30px;
             display: flex;
-            align-items: flex-end;
-            gap: 3px;
-            height: 40px;
+            align-items: center;
+            gap: 2px;
         }
 
         .wave-bar {
-            width: 4px;
-            height: 20%;
-            background: var(--primary);
-            border-radius: 2px;
-            animation: wave 1s infinite alternate;
+            flex: 1;
+            height: 100%;
+            background: #00d2ff;
+            border-radius: 3px;
+            animation: wave 1s ease-in-out infinite;
         }
 
         @keyframes wave {
-            from {
-                height: 20%;
+
+            0%,
+            100% {
+                transform: scaleY(0.3);
             }
 
-            to {
-                height: 100%;
+            50% {
+                transform: scaleY(1);
             }
         }
 
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
+        /* History Panel */
+        .history-panel {
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 1.5rem;
+        }
 
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-text {
+            flex: 1;
+        }
+
+        .history-time {
+            color: #aaa;
+            font-size: 0.8rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #00d2ff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
             .translator-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .mode-selector {
+                flex-direction: column;
             }
         }
     </style>
@@ -236,77 +444,211 @@
 
 <body>
     <nav class="navbar">
-        <div class="logo">🤟 ZAMONAVIY IMO-ISHORA AI</div>
-        <div class="nav-links">
-            <span id="currentTime"></span>
+        <div class="nav-container">
+            <div class="logo">🤟 Imo-ishora AI</div>
+            <div class="nav-links">
+                <a href="#" class="active" data-mode="deaf">Karlar uchun</a>
+                <a href="#" data-mode="hearing">Eshitadiganlar uchun</a>
+            </div>
         </div>
     </nav>
 
     <div class="main-container">
-        <header class="hero">
-            <h1>Muloqot Chegarasiz</h1>
-            <p>Imo-ishora tili va O'zbek tili o'rtasida sun'iy intellekt tarjimoni</p>
-        </header>
+        <div class="hero">
+            <h1>Ikki tomonlama AI tarjimon</h1>
+            <p>Imo-ishora tili ↔ O'zbek tili | Sun'iy intellekt asosida real vaqtda tarjima</p>
 
-        <div class="mode-switcher">
-            <button class="mode-btn active" id="deafModeBtn">👤 Karlar Rejimi</button>
-            <button class="mode-btn" id="hearingModeBtn">🗣️ Eshituvchilar Rejimi</button>
+            <div class="mode-selector">
+                <button class="mode-btn active" data-mode="deaf">👤 Karlar rejimi</button>
+                <button class="mode-btn" data-mode="hearing">🗣️ Eshitadiganlar rejimi</button>
+            </div>
         </div>
 
-        <main id="deafPanel" class="translator-grid">
+        <!-- Deaf Mode (Karlar uchun) -->
+        <div id="deafMode" class="translator-grid">
+            <!-- Chap taraf: Kamera -->
             <div class="card">
-                <div class="status-badge">
-                    <span class="dot"></span> AI Kamera Faol
+                <div class="card-header">
+                    <div class="card-icon">📹</div>
+                    <div>
+                        <div class="card-title">Imo-ishora kamerasi</div>
+                        <div class="card-subtitle">Qo'l harakatlaringizni ko'rsating</div>
+                    </div>
                 </div>
-                <div class="video-wrapper">
-                    <video id="videoInput" autoplay playsinline muted></video>
-                    <canvas id="outputCanvas"></canvas>
+
+                <div class="video-container">
+                    <video id="deafVideo" autoplay playsinline></video>
+                    <canvas id="deafCanvas"></canvas>
                 </div>
+
                 <div class="controls">
-                    <button class="btn btn-start" id="startCam">KAMERANI YOQISH</button>
-                    <button class="btn btn-stop" id="stopCam">TO'XTATISH</button>
+                    <button class="btn btn-primary" id="startDeafCamera">▶ Boshlash</button>
+                    <button class="btn btn-danger" id="stopDeafCamera">⏹ To'xtatish</button>
+                </div>
+
+                <div class="translation-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>🔴 AI tahlil qilmoqda</span>
+                        <span class="loading" id="deafLoading"></span>
+                    </div>
+                    <div class="translation-text" id="deafTranslation">...</div>
+                    <div class="translation-desc" id="deafDescription">Imo-ishorani ko'rsating</div>
+
+                    <div class="sign-display" id="deafSigns">
+                        <div class="sign-item">
+                            <span class="sign-emoji">👋</span>
+                            <span class="sign-word">salom</span>
+                        </div>
+                    </div>
+
+                    <div class="voice-indicator">
+                        <span>🔊 Ovozli chiqish</span>
+                        <div class="voice-wave">
+                            <div class="wave-bar" style="animation-delay: 0s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.1s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.2s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.3s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.4s"></div>
+                        </div>
+                        <button class="btn btn-outline" id="speakTranslation">🔊</button>
+                    </div>
                 </div>
             </div>
 
+            <!-- O'ng taraf: AI javob -->
             <div class="card">
-                <h3>Tarjima va AI Javobi</h3>
-                <div class="result-panel">
-                    <div id="signResult" class="result-text">...</div>
-                    <div id="aiResponse" style="margin-top: 1rem; color: #94a3b8;">Imo-ishora kutilmoqda</div>
+                <div class="card-header">
+                    <div class="card-icon">🤖</div>
+                    <div>
+                        <div class="card-title">AI tarjimon</div>
+                        <div class="card-subtitle">Sun'iy intellekt javobi</div>
+                    </div>
                 </div>
-                <div id="history" style="margin-top: 2rem;">
-                    <h4>So'nggi harakatlar</h4>
-                    <div id="historyList" style="font-size: 0.9rem; color: #64748b; margin-top: 1rem;"></div>
+
+                <div class="avatar-container">
+                    <div class="avatar-3d" id="aiAvatar">
+                        🤖
+                    </div>
+                    <div class="avatar-hands">
+                        <div class="hand" id="leftHand">🖐️</div>
+                        <div class="hand" id="rightHand">🖐️</div>
+                    </div>
+                </div>
+
+                <div class="translation-panel" style="margin-top: 1rem;">
+                    <div class="translation-text" id="aiResponseText" style="font-size: 1.5rem;">
+                        Salom! Qanday yordam kerak?
+                    </div>
+                    <div class="sign-display" id="aiResponseSigns">
+                        <div class="sign-item">
+                            <span class="sign-emoji">👋</span>
+                            <span class="sign-word">salom</span>
+                        </div>
+                        <div class="sign-item">
+                            <span class="sign-emoji">❓</span>
+                            <span class="sign-word">qanday</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </main>
+        </div>
 
-        <main id="hearingPanel" class="translator-grid" style="display: none;">
+        <!-- Hearing Mode (Eshitadiganlar uchun) -->
+        <div id="hearingMode" class="translator-grid" style="display: none;">
+            <!-- Chap taraf: Mikrofon -->
             <div class="card">
-                <h3>Ovozli Kirish</h3>
-                <div class="result-panel">
-                    <div id="speechText" style="font-size: 1.2rem;">Gapirish uchun mikrofoni bosing...</div>
-                    <div class="voice-wave" id="voiceWave" style="display: none; margin-top: 1rem;">
-                        <div class="wave-bar"></div>
+                <div class="card-header">
+                    <div class="card-icon">🎤</div>
+                    <div>
+                        <div class="card-title">Ovozli kirish</div>
+                        <div class="card-subtitle">Gapiring, AI imo-ishoraga aylantiradi</div>
+                    </div>
+                </div>
+
+                <div class="voice-indicator" style="margin-bottom: 1rem;">
+                    <span>🎤 Mikrofon</span>
+                    <div class="voice-wave">
+                        <div class="wave-bar" style="animation-delay: 0s"></div>
                         <div class="wave-bar" style="animation-delay: 0.1s"></div>
                         <div class="wave-bar" style="animation-delay: 0.2s"></div>
                         <div class="wave-bar" style="animation-delay: 0.3s"></div>
+                        <div class="wave-bar" style="animation-delay: 0.4s"></div>
                     </div>
                 </div>
+
                 <div class="controls">
-                    <button class="btn btn-start" id="startMic">MIKROFONNI YOQISH</button>
-                    <button class="btn btn-stop" id="stopMic">TO'XTATISH</button>
+                    <button class="btn btn-primary" id="startListening">🎤 Boshlash</button>
+                    <button class="btn btn-danger" id="stopListening">⏹ To'xtatish</button>
+                </div>
+
+                <div class="translation-panel">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>Sizning gapingiz:</span>
+                        <span class="loading" id="speechLoading"></span>
+                    </div>
+                    <div class="translation-text" id="userSpeech" style="font-size: 1.2rem;">
+                        ...
+                    </div>
                 </div>
             </div>
 
+            <!-- O'ng taraf: Imo-ishora chiqish -->
             <div class="card">
-                <h3>Imo-ishora Avatar</h3>
-                <div class="avatar-view" id="avatarDisplay">🤖</div>
-                <div id="signOutput"
-                    style="margin-top: 1.5rem; text-align: center; font-size: 1.5rem; font-weight: bold; color: var(--primary);">
+                <div class="card-header">
+                    <div class="card-icon">🤟</div>
+                    <div>
+                        <div class="card-title">Imo-ishora chiqish</div>
+                        <div class="card-subtitle">AI imo-ishoraga aylantirdi</div>
+                    </div>
+                </div>
+
+                <div class="avatar-container">
+                    <div class="avatar-3d" id="signAvatar">
+                        🧑
+                    </div>
+                    <div class="avatar-hands">
+                        <div class="hand" id="signLeftHand">🖐️</div>
+                        <div class="hand" id="signRightHand">🖐️</div>
+                    </div>
+                </div>
+
+                <div class="sign-display" id="signOutput">
+                    <div class="sign-item">
+                        <span class="sign-emoji">👋</span>
+                        <span class="sign-word">salom</span>
+                    </div>
+                    <div class="sign-item">
+                        <span class="sign-emoji">👤</span>
+                        <span class="sign-word">men</span>
+                    </div>
+                </div>
+
+                <div class="translation-text" id="signTranslation" style="font-size: 1.5rem; margin-top: 1rem;">
+                    Salom, men AI
                 </div>
             </div>
-        </main>
+        </div>
+
+        <!-- Tarix paneli -->
+        <div class="history-panel">
+            <h3 style="margin-bottom: 1rem;">📋 So'nggi tarjimalar</h3>
+            <div id="historyList">
+                <div class="history-item">
+                    <div class="history-icon">👤</div>
+                    <div class="history-text">
+                        <div><strong>Imo-ishora → Matn:</strong> Men uyga ketyapman</div>
+                        <div class="history-time">2 daqiqa oldin</div>
+                    </div>
+                </div>
+                <div class="history-item">
+                    <div class="history-icon">🗣️</div>
+                    <div class="history-text">
+                        <div><strong>Matn → Imo-ishora:</strong> Salom, qanday siz?</div>
+                        <div class="history-time">5 daqiqa oldin</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MediaPipe Libraries -->

@@ -4,144 +4,99 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-// Gemini API (Note: Use environment variables in production)
-const GEMINI_API_KEY = 'AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Gemini API
+const genAI = new GoogleGenerativeAI('AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI');
 const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Kengaytirilgan Imo-ishora lug'ati (DOCX dan olingan namunalar)
+// Imo-ishora lug'ati
 const signDictionary = {
-    "salom": {
-        emoji: "👋",
-        description: "O'ng kaft «a» holatida peshanaga, so'ng dahanga tekkiziladi.",
-        translation: "Assalomu alaykum, salom"
-    },
-    "rahmat": {
-        emoji: "🙏",
-        description: "Kaftni ko'krakning chap tomoniga tekkizib oldinga-o'ngga yo'naltirish.",
-        translation: "Tashakkur, minnatdorchilik"
-    },
-    "xayr": {
-        emoji: "👋",
-        description: "Hamma qo'llaydigan imo-ishora - qo'l siltash.",
-        translation: "Xayr, xayrlashuv"
-    },
-    "men": {
-        emoji: "👤",
-        description: "Qo'lni ko'krakka qo'yish",
-        translation: "Men, o'zim"
-    },
-    "uy": {
-        emoji: "🏠",
-        description: "Ikki qo'l bilan tom shakli yasash",
-        translation: "Uy, bino"
-    },
-    "ketyapman": {
-        emoji: "🚶",
-        description: "Qo'lni oldinga siljitish",
-        translation: "Ketmoq, bormoq"
-    },
-    "ha": {
-        emoji: "👍",
-        description: "Bosh barmoq ko'rsatish",
-        translation: "Ha, to'g'ri"
-    },
-    "yo'q": {
-        emoji: "👎",
-        description: "Bosh barmoq pastga",
-        translation: "Yo'q, noto'g'ri"
-    },
-    "qanday": {
-        emoji: "❓",
-        description: "Qo'lni chapdan-o'ngga silkitish",
-        translation: "Qanday, qanaqa"
-    },
-    "yaxshi": {
-        emoji: "👍",
-        description: "Bosh barmoq ko'rsatish",
-        translation: "Yaxshi, durust"
-    },
-    "ona": {
-        emoji: "👩",
-        description: "Qo'lni lunjga tekkizish",
-        translation: "Ona, oyi"
-    },
-    "ota": {
-        emoji: "👨",
-        description: "Qo'lni peshanaga tekkizish",
-        translation: "Ota, dada"
-    },
-    "osh": {
-        emoji: "🍚",
-        description: "Osh yeyish harakati",
-        translation: "Osh, palov"
-    },
-    "suv": {
-        emoji: "💧",
-        description: "Ichish harakati",
-        translation: "Suv, drinking water"
-    }
+    "salom": "Salom, assalomu alaykum",
+    "rahmat": "Rahmat, tashakkur",
+    "men": "Men, o'zim",
+    "uy": "Uy, bino",
+    "ketyapman": "Ketmoq, bormoq",
+    "men uyga ketyapman": "Men uyga ketyapman",
+    "ha": "Ha, to'g'ri",
+    "yo'q": "Yo'q, noto'g'ri",
+    "qanday": "Qanday, qanaqa",
+    "yaxshi": "Yaxshi, durust",
+    "non": "Non, kulcha",
+    "suv": "Suv, choy",
+    "ona": "Ona, oyi",
+    "ota": "Ota, dada",
+    "bola": "Bola, chaqaloq"
 };
 
 // API endpointlar
 app.post('/api/translate/sign', async (req, res) => {
     const { sign } = req.body;
-    const signData = signDictionary[sign.toLowerCase()];
 
-    if (signData) {
+    if (signDictionary[sign]) {
+        // Gemini AI dan javob olish
         try {
-            const prompt = `Foydalanuvchi imo-ishora orqali "${signData.translation}" dedi. Unga qisqa, do'stona javob qaytar (2-3 jumla).`;
+            const prompt = `Foydalanuvchi imo-ishora orqali "${signDictionary[sign]}" dedi. Unga qisqa, do'stona javob qaytar.`;
             const result = await model.generateContent(prompt);
             const response = await result.response;
 
             res.json({
                 success: true,
-                translation: signData.translation,
+                translation: signDictionary[sign],
                 aiResponse: response.text(),
-                emoji: signData.emoji
+                sign: sign
             });
         } catch (error) {
-            console.error("Gemini Error:", error);
             res.json({
                 success: true,
-                translation: signData.translation,
-                aiResponse: "Salom! Men sizni tushundim.",
-                emoji: signData.emoji
+                translation: signDictionary[sign],
+                aiResponse: "Salom! Qanday yordam kerak?",
+                sign: sign
             });
         }
     } else {
-        res.status(404).json({ success: false, message: "Imo-ishora topilmadi" });
+        res.status(404).json({
+            success: false,
+            message: "Imo-ishora topilmadi"
+        });
     }
 });
 
 app.post('/api/translate/text', async (req, res) => {
     const { text } = req.body;
+
+    // Matnni imo-ishoralarga aylantirish
     const words = text.toLowerCase().split(/\s+/);
-    const resultSigns = [];
+    const signs = [];
 
     words.forEach(word => {
         const cleanWord = word.replace(/[.,!?]/g, '');
         if (signDictionary[cleanWord]) {
-            resultSigns.push({
+            signs.push({
                 word: cleanWord,
-                ...signDictionary[cleanWord]
+                translation: signDictionary[cleanWord]
             });
         }
     });
 
-    res.json({ success: true, original: text, signs: resultSigns });
+    res.json({
+        success: true,
+        original: text,
+        signs: signs
+    });
 });
 
-app.get('/api/dictionary', (req, res) => {
-    res.json({ success: true, dictionary: signDictionary });
+app.get('/api/signs', (req, res) => {
+    res.json({
+        success: true,
+        signs: Object.keys(signDictionary)
+    });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server ishga tushdi: http://localhost:${PORT}`);
 });
