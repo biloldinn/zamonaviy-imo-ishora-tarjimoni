@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = 3000;
@@ -14,39 +15,37 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Imo-ishora lug'ati
-const signDictionary = {
-    "salom": "Salom, assalomu alaykum",
-    "rahmat": "Rahmat, tashakkur",
-    "men": "Men, o'zim",
-    "uy": "Uy, bino",
-    "ketyapman": "Ketmoq, bormoq",
-    "men uyga ketyapman": "Men uyga ketyapman",
-    "ha": "Ha, to'g'ri",
-    "yo'q": "Yo'q, noto'g'ri",
-    "qanday": "Qanday, qanaqa",
-    "yaxshi": "Yaxshi, durust",
-    "non": "Non, kulcha",
-    "suv": "Suv, choy",
-    "ona": "Ona, oyi",
-    "ota": "Ota, dada",
-    "bola": "Bola, chaqaloq"
-};
+// Imo-ishora lug'atni yuklash
+let signDictionary = {};
+try {
+    const dictionaryData = fs.readFileSync(path.join(__dirname, 'sign_dictionary.json'), 'utf-8');
+    signDictionary = JSON.parse(dictionaryData);
+    console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
+} catch (error) {
+    console.error('❌ Lug\'atni yuklashda xato:', error);
+    // Zaxira lug'at
+    signDictionary = {
+        "salom": { "original": "Salom", "description": "Salomlashish" },
+        "rahmat": { "original": "Rahmat", "description": "Tashakkur" }
+    };
+}
 
 // API endpointlar
 app.post('/api/translate/sign', async (req, res) => {
     const { sign } = req.body;
 
-    if (signDictionary[sign]) {
+    const signData = signDictionary[sign];
+    if (signData) {
         // Gemini AI dan javob olish
         try {
-            const prompt = `Foydalanuvchi imo-ishora orqali "${signDictionary[sign]}" dedi. Unga qisqa, do'stona javob qaytar.`;
+            const prompt = `Foydalanuvchi imo-ishora orqali "${signData.original}" dedi. Ma'nosi: "${signData.description}". Unga qisqa, o'zbek tilida do'stona javob qaytar.`;
             const result = await model.generateContent(prompt);
             const response = await result.response;
 
             res.json({
                 success: true,
-                translation: signDictionary[sign],
+                translation: signData.original,
+                description: signData.description,
                 aiResponse: response.text(),
                 sign: sign
             });
@@ -75,10 +74,12 @@ app.post('/api/translate/text', async (req, res) => {
 
     words.forEach(word => {
         const cleanWord = word.replace(/[.,!?]/g, '');
-        if (signDictionary[cleanWord]) {
+        const signData = signDictionary[cleanWord];
+        if (signData) {
             signs.push({
                 word: cleanWord,
-                translation: signDictionary[cleanWord]
+                translation: signData.original,
+                description: signData.description
             });
         }
     });
@@ -87,6 +88,13 @@ app.post('/api/translate/text', async (req, res) => {
         success: true,
         original: text,
         signs: signs
+    });
+});
+
+app.get('/api/dictionary', (req, res) => {
+    res.json({
+        success: true,
+        dictionary: signDictionary
     });
 });
 

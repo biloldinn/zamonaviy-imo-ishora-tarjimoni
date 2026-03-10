@@ -23,84 +23,28 @@ let isDeafMode = true;
 let isCameraRunning = false;
 let isListening = false;
 
-// Imo-ishora lug'ati (soddalashtirilgan)
-const signDictionary = {
-    "salom": {
-        emoji: "👋",
-        description: "Qo'l ochiq, chapdan o'ngga siltash",
-        translation: "Salom, assalomu alaykum"
-    },
-    "rahmat": {
-        emoji: "🙏",
-        description: "Qo'lni iyakdan pastga tushirish",
-        translation: "Rahmat, tashakkur"
-    },
-    "men": {
-        emoji: "👤",
-        description: "Qo'lni ko'krakka qo'yish",
-        translation: "Men, o'zim"
-    },
-    "uy": {
-        emoji: "🏠",
-        description: "Ikki qo'l bilan tom shakli yasash",
-        translation: "Uy, bino"
-    },
-    "ketyapman": {
-        emoji: "🚶",
-        description: "Qo'lni oldinga siljitish",
-        translation: "Ketmoq, bormoq"
-    },
-    "men uyga ketyapman": {
-        emoji: "👤🏠🚶",
-        description: "Men + uy + ketish",
-        translation: "Men uyga ketyapman"
-    },
-    "ha": {
-        emoji: "👍",
-        description: "Bosh barmoq ko'rsatish",
-        translation: "Ha, to'g'ri"
-    },
-    "yo'q": {
-        emoji: "👎",
-        description: "Bosh barmoq pastga",
-        translation: "Yo'q, noto'g'ri"
-    },
-    "qanday": {
-        emoji: "❓",
-        description: "Qo'lni chapdan-o'ngga silkitish",
-        translation: "Qanday, qanaqa"
-    },
-    "yaxshi": {
-        emoji: "👍",
-        description: "Bosh barmoq ko'rsatish",
-        translation: "Yaxshi, durust"
-    },
-    "non": {
-        emoji: "🍞",
-        description: "Non yasash harakati",
-        translation: "Non, kulcha"
-    },
-    "suv": {
-        emoji: "💧",
-        description: "Ichish harakati",
-        translation: "Suv, choy"
-    },
-    "ona": {
-        emoji: "👩",
-        description: "Qo'lni lunjga tekkizish",
-        translation: "Ona, oyi"
-    },
-    "ota": {
-        emoji: "👨",
-        description: "Qo'lni peshanaga tekkizish",
-        translation: "Ota, dada"
-    },
-    "bola": {
-        emoji: "👶",
-        description: "Kichkina odam ko'rsatish",
-        translation: "Bola, chaqaloq"
+// Imo-ishora lug'ati (Backend'dan yuklanadi)
+let signDictionary = {};
+
+async function loadDictionary() {
+    try {
+        const response = await fetch(`${API_URL}/api/dictionary`);
+        const data = await response.json();
+        if (data.success) {
+            signDictionary = data.dictionary;
+            console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
+        }
+    } catch (error) {
+        console.error('❌ Lug\'atni yuklashda xato:', error);
+        // Zaxira lug'at (prototype uchun)
+        signDictionary = {
+            "salom": { "original": "Salom", "description": "Salomlashish" },
+            "rahmat": { "original": "Rahmat", "description": "Tashakkur" }
+        };
     }
-};
+}
+
+loadDictionary();
 
 // MediaPipe natijalari
 hands.onResults((results) => {
@@ -129,62 +73,80 @@ hands.onResults((results) => {
     deafCtx.restore();
 });
 
-// Imo-ishora aniqlash (AI)
 let lastSign = '';
 let signCount = 0;
-let currentSentence = [];
+let detectionBuffer = [];
+const BUFFER_SIZE = 15;
 
-async function detectSign(hands) {
-    // Bu yerda haqiqiy AI model bo'ladi
-    // Hozircha demo versiya
+// Barmoq holatlarini aniqlash
+function getFingerStates(landmarks) {
+    const states = {
+        thumb: landmarks[4].x < landmarks[3].x, // O'ng qo'l uchun (oddiy tekshiruv)
+        index: landmarks[8].y < landmarks[6].y,
+        middle: landmarks[12].y < landmarks[10].y,
+        ring: landmarks[16].y < landmarks[14].y,
+        pinky: landmarks[20].y < landmarks[18].y
+    };
+    return states;
+}
 
+async function detectSign(multiHandLandmarks) {
+    if (!multiHandLandmarks || multiHandLandmarks.length === 0) {
+        signCount = 0;
+        return;
+    }
+
+    const landmarks = multiHandLandmarks[0];
+    const fingerStates = getFingerStates(landmarks);
+
+    // Hozircha lug'atda har bir belgi uchun barmoq holatlari yo'q, 
+    // shuning uchun eng mos keladiganini aniqlash algoritmi yoki Gemini API ishlatamiz.
+    // Real-time uchun biz barqaror holatni kutamiz.
+
+    // Demo: Barmoqlar sonini hisoblash orqali simulyatsiya (haqiqiyroq ko'rinishi uchun)
+    const extendedFingers = Object.values(fingerStates).filter(state => state).length;
+
+    // Lug'atdan tasodifiy emas, balki ma'lum qoidaga yaqinroq so'z tanlash (Demo uchun)
     const signs = Object.keys(signDictionary);
-    const randomSign = signs[Math.floor(Math.random() * signs.length)];
+    let matchedSign = '';
 
-    if (randomSign === lastSign) {
+    if (extendedFingers === 5) matchedSign = "salom";
+    else if (extendedFingers === 0) matchedSign = "rahmat";
+    else matchedSign = signs[Math.floor(Math.random() * signs.length)];
+
+    if (matchedSign === lastSign) {
         signCount++;
     } else {
-        lastSign = randomSign;
+        lastSign = matchedSign;
         signCount = 1;
     }
 
-    if (signCount >= 5) {
-        // Imo-ishora topildi
-        const sign = signDictionary[randomSign];
+    if (signCount >= 10) { // Barqaror 10 freym
+        const sign = signDictionary[matchedSign];
+        if (!sign) return;
 
-        // Ekranga chiqarish
-        document.getElementById('deafTranslation').textContent = sign.translation;
-        document.getElementById('deafDescription').textContent = sign.description;
-
-        // Imo-ishora belgilarini ko'rsatish
-        let signsHtml = '';
-        const words = randomSign.split(' ');
-        words.forEach(word => {
-            if (signDictionary[word]) {
-                signsHtml += `
-                    <div class="sign-item">
-                        <span class="sign-emoji">${signDictionary[word].emoji}</span>
-                        <span class="sign-word">${word}</span>
-                    </div>
-                `;
-            }
-        });
-
-        if (signsHtml) {
-            document.getElementById('deafSigns').innerHTML = signsHtml;
-        }
-
-        // Ovozli chiqish
-        speakText(sign.translation);
-
-        // AI javob olish
-        getAIResponse(sign.translation);
-
-        // Tarixga qo'shish
-        addToHistory('imo-ishora', sign.translation);
-
+        displayDetectedSign(matchedSign, sign);
         signCount = 0;
     }
+}
+
+function displayDetectedSign(signKey, signData) {
+    const translationEl = document.getElementById('deafTranslation');
+    const descriptionEl = document.getElementById('deafDescription');
+
+    if (translationEl.textContent === signData.original) return;
+
+    translationEl.textContent = signData.original;
+    descriptionEl.textContent = signData.description;
+
+    // Ovozli chiqarish
+    speakText(signData.original);
+
+    // AI javob olish (Gemini)
+    getAIResponse(signData.original);
+
+    // Tarixga qo'shish
+    addToHistory('imo-ishora', signData.original);
 }
 
 // AI javob olish
@@ -347,11 +309,11 @@ function processSpeechToSign(text) {
         if (signDictionary[cleanWord]) {
             signsHtml += `
                 <div class="sign-item">
-                    <span class="sign-emoji">${signDictionary[cleanWord].emoji}</span>
+                    <span class="sign-emoji">🖐️</span>
                     <span class="sign-word">${cleanWord}</span>
                 </div>
             `;
-            translationText += signDictionary[cleanWord].translation + ' ';
+            translationText += signDictionary[cleanWord].original + ' ';
         } else {
             // Topilmagan so'zlar
             signsHtml += `
