@@ -52,21 +52,36 @@ hands.onResults((results) => {
 
     deafCtx.save();
     deafCtx.clearRect(0, 0, deafCanvas.width, deafCanvas.height);
+
+    // Smooth image drawing
+    deafCtx.globalAlpha = 1.0;
     deafCtx.drawImage(results.image, 0, 0, deafCanvas.width, deafCanvas.height);
 
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
+            // Realistic "Skeleton" Look
             drawConnectors(deafCtx, landmarks, HAND_CONNECTIONS, {
-                color: '#00FF00',
-                lineWidth: 3
+                color: 'rgba(0, 210, 255, 0.8)',
+                lineWidth: 5
             });
             drawLandmarks(deafCtx, landmarks, {
-                color: '#FF0000',
-                radius: 5
+                color: '#ffffff',
+                fillColor: '#3a7bd5',
+                radius: 4
+            });
+
+            // Highlight fingertips for "Active" feel
+            const fingertips = [4, 8, 12, 16, 20];
+            fingertips.forEach(idx => {
+                const lm = landmarks[idx];
+                deafCtx.beginPath();
+                deafCtx.arc(lm.x * deafCanvas.width, lm.y * deafCanvas.height, 8, 0, 2 * Math.PI);
+                deafCtx.fillStyle = 'rgba(0, 210, 255, 0.3)';
+                deafCtx.fill();
             });
         }
 
-        // Imo-ishorani aniqlash
+        // Detect sign
         detectSign(results.multiHandLandmarks);
     }
 
@@ -189,20 +204,47 @@ async function getAIResponse(userMessage) {
     }
 }
 
-// Matnni imo-ishoralarga aylantirish
+// Update Avatar and Visual Output (Realistic Hands)
+function updateAvatar(text) {
+    const aiAvatar = document.getElementById('aiAvatar');
+    const leftHand = document.getElementById('leftHand');
+    const rightHand = document.getElementById('rightHand');
+    const lowerText = text.toLowerCase();
+
+    // Reset animations
+    leftHand.classList.remove('active');
+    rightHand.classList.remove('active');
+
+    // AI Glow effect
+    aiAvatar.innerHTML = '<div class="ai-glow"></div>AI';
+
+    // Simple animation based on keywords
+    if (lowerText.includes('salom') || lowerText.includes('alik')) {
+        leftHand.classList.add('active');
+        rightHand.classList.add('active');
+    } else if (lowerText.includes('rahmat') || lowerText.includes('tashakkur')) {
+        rightHand.classList.add('active');
+    } else if (lowerText.includes('ha') || lowerText.includes('yaxshi')) {
+        leftHand.classList.add('active');
+    } else {
+        // Default subtle pulse
+        setTimeout(() => {
+            rightHand.classList.add('active');
+            setTimeout(() => rightHand.classList.remove('active'), 1000);
+        }, 500);
+    }
+}
+
 function textToSigns(text) {
     const words = text.toLowerCase().split(/\s+/);
     let signsHtml = '';
 
     words.forEach(word => {
-        // So'zni tozalash
         const cleanWord = word.replace(/[.,!?]/g, '');
-
         if (signDictionary[cleanWord]) {
             signsHtml += `
                 <div class="sign-item">
-                    <span class="sign-emoji">${signDictionary[cleanWord].emoji}</span>
-                    <span class="sign-word">${cleanWord}</span>
+                    <span class="sign-label">${cleanWord.toUpperCase()}</span>
                 </div>
             `;
         }
@@ -211,42 +253,48 @@ function textToSigns(text) {
     if (signsHtml) {
         document.getElementById('aiResponseSigns').innerHTML = signsHtml;
     }
-
-    // Avatarni yangilash
     updateAvatar(text);
 }
 
-// Avatarni yangilash
-function updateAvatar(text) {
-    const avatar = document.getElementById('aiAvatar');
-    const leftHand = document.getElementById('leftHand');
-    const rightHand = document.getElementById('rightHand');
+// Enhanced Speech Synthesis (Uzbek support or fallback)
+let synth = window.speechSynthesis;
+let voices = [];
 
-    // Imo-ishoraga qarab avatar harakatlari
-    if (text.includes('salom')) {
-        leftHand.textContent = '👋';
-        rightHand.textContent = '👋';
-    } else if (text.includes('xayr')) {
-        leftHand.textContent = '🖐️';
-        rightHand.textContent = '🖐️';
-    } else if (text.includes('ha')) {
-        leftHand.textContent = '👍';
-        rightHand.textContent = '👍';
-    } else {
-        leftHand.textContent = '🖐️';
-        rightHand.textContent = '🖐️';
-    }
+function loadVoices() {
+    voices = synth.getVoices();
 }
 
-// Ovozli chiqish
+if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+}
+
 function speakText(text) {
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'uz-UZ';
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        window.speechSynthesis.speak(utterance);
+    if (!synth) return;
+
+    // Wait for voices to load if needed
+    if (voices.length === 0) {
+        loadVoices();
     }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Find best voice (Prefer Uzbek, then Turkish as a close sound, then any)
+    let selectedVoice = voices.find(v => v.lang.includes('uz') || v.lang.includes('UZ'));
+    if (!selectedVoice) {
+        selectedVoice = voices.find(v => v.lang.includes('tr') || v.lang.includes('TR'));
+    }
+
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
+    }
+
+    utterance.lang = 'uz-UZ';
+    utterance.rate = 0.9; // Slightly slower for clarity
+    utterance.pitch = 1.0;
+
+    // Important: cancel current speaking before starting new
+    synth.cancel();
+    synth.speak(utterance);
 }
 
 // Ovozli kirish (Speech-to-Text)
@@ -309,17 +357,15 @@ function processSpeechToSign(text) {
         if (signDictionary[cleanWord]) {
             signsHtml += `
                 <div class="sign-item">
-                    <span class="sign-emoji">🖐️</span>
-                    <span class="sign-word">${cleanWord}</span>
+                    <span class="sign-label">${cleanWord.toUpperCase()}</span>
                 </div>
             `;
             translationText += signDictionary[cleanWord].original + ' ';
         } else {
-            // Topilmagan so'zlar
+            // Find synonyms or partial matches
             signsHtml += `
-                <div class="sign-item">
-                    <span class="sign-emoji">❓</span>
-                    <span class="sign-word">${cleanWord}</span>
+                <div class="sign-item unrecognized">
+                    <span class="sign-label">${cleanWord.toUpperCase()}</span>
                 </div>
             `;
         }
@@ -336,19 +382,20 @@ function processSpeechToSign(text) {
 }
 
 function updateSignAvatar(text) {
-    const avatar = document.getElementById('signAvatar');
     const leftHand = document.getElementById('signLeftHand');
     const rightHand = document.getElementById('signRightHand');
+    const lowerText = text.toLowerCase();
 
-    if (text.includes('salom')) {
-        leftHand.textContent = '👋';
-        rightHand.textContent = '👋';
-    } else if (text.includes('xayr')) {
-        leftHand.textContent = '🖐️';
-        rightHand.textContent = '🖐️';
+    leftHand.classList.remove('active');
+    rightHand.classList.remove('active');
+
+    if (lowerText.includes('salom')) {
+        leftHand.classList.add('active');
+        rightHand.classList.add('active');
+    } else if (lowerText.includes('xayr')) {
+        rightHand.classList.add('active');
     } else {
-        leftHand.textContent = '🖐️';
-        rightHand.textContent = '🖐️';
+        leftHand.classList.add('active');
     }
 }
 
@@ -482,10 +529,11 @@ function drawConnectors(ctx, landmarks, connections, options) {
         const to = landmarks[connection[1]];
         if (from && to) {
             ctx.beginPath();
-            ctx.moveTo(from.x * canvasCtx.canvas.width, from.y * canvasCtx.canvas.height);
-            ctx.lineTo(to.x * canvasCtx.canvas.width, to.y * canvasCtx.canvas.height);
+            ctx.moveTo(from.x * deafCanvas.width, from.y * deafCanvas.height);
+            ctx.lineTo(to.x * deafCanvas.width, to.y * deafCanvas.height);
             ctx.strokeStyle = options.color || '#00FF00';
             ctx.lineWidth = options.lineWidth || 2;
+            ctx.lineCap = 'round';
             ctx.stroke();
         }
     }
@@ -495,9 +543,12 @@ function drawLandmarks(ctx, landmarks, options) {
     if (!landmarks) return;
     for (const landmark of landmarks) {
         ctx.beginPath();
-        ctx.arc(landmark.x * canvasCtx.canvas.width, landmark.y * canvasCtx.canvas.height, options.radius || 2, 0, 2 * Math.PI);
-        ctx.fillStyle = options.color || '#FF0000';
+        ctx.arc(landmark.x * deafCanvas.width, landmark.y * deafCanvas.height, options.radius || 2, 0, 2 * Math.PI);
+        ctx.fillStyle = options.fillColor || '#FF0000';
         ctx.fill();
+        ctx.strokeStyle = options.color || '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
     }
 }
 

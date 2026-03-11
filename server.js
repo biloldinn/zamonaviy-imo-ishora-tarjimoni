@@ -33,34 +33,42 @@ try {
 // API endpointlar
 app.post('/api/translate/sign', async (req, res) => {
     const { sign } = req.body;
+    const lookupSign = sign.toLowerCase().trim();
+    const signData = signDictionary[lookupSign];
 
-    const signData = signDictionary[sign];
     if (signData) {
-        // Gemini AI dan javob olish
         try {
-            const prompt = `Foydalanuvchi imo-ishora orqali "${signData.original}" dedi. Ma'nosi: "${signData.description}". Unga qisqa, o'zbek tilida do'stona javob qaytar.`;
+            // Enhanced Prompt for a more "human" feel
+            const prompt = `Foydalanuvchi imo-ishora tili orqali quyidagilarni aytdi: "${signData.original}". 
+            Ushbu gapning tavsifi: "${signData.description}". 
+            Iltimos, ushbu ma'lumotga asoslanib, juda samimiy, do'stona va qisqa (1-2 gap) javob qaytar. 
+            Javobing faqat o'zbek tilida bo'lsin.
+            Agar foydalanuvchi "salom" desa, alik ol. Agar "rahmat" desa, xursand bo'l.`;
+
             const result = await model.generateContent(prompt);
             const response = await result.response;
+            const textResponse = response.text();
 
             res.json({
                 success: true,
                 translation: signData.original,
                 description: signData.description,
-                aiResponse: response.text(),
+                aiResponse: textResponse,
                 sign: sign
             });
         } catch (error) {
+            console.error('AI Error:', error);
             res.json({
                 success: true,
-                translation: signDictionary[sign],
-                aiResponse: "Salom! Qanday yordam kerak?",
+                translation: signData.original,
+                aiResponse: "Tushunarlik! Qanday yordam bera olaman?",
                 sign: sign
             });
         }
     } else {
         res.status(404).json({
             success: false,
-            message: "Imo-ishora topilmadi"
+            message: "Kuzatilgan imo-ishora lug'atda topilmadi."
         });
     }
 });
@@ -73,7 +81,7 @@ app.post('/api/translate/text', async (req, res) => {
     const signs = [];
 
     words.forEach(word => {
-        const cleanWord = word.replace(/[.,!?]/g, '');
+        const cleanWord = word.replace(/[.,!?]/g, '').trim();
         const signData = signDictionary[cleanWord];
         if (signData) {
             signs.push({

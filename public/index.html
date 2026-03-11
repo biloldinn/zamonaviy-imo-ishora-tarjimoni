@@ -43,6 +43,7 @@
             font-weight: bold;
             background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -88,6 +89,7 @@
             margin-bottom: 1rem;
             background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
@@ -439,13 +441,122 @@
                 flex-direction: column;
             }
         }
+
+        /* AI Gestures & Glow */
+        .ai-glow {
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(0, 210, 255, 0.4) 0%, transparent 70%);
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        .sign-gesture {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00d2ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            animation: slide-up 0.5s ease-out;
+        }
+
+        .sign-label {
+            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+            padding: 0.5rem 1.5rem;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+        }
+
+        @keyframes slide-up {
+            from {
+                transform: translateY(10px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        #aiAvatar {
+            font-size: 4rem;
+            color: white;
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
+        }
+
+        .hand {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 210, 255, 0.3);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .hand img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
+        }
+
+        .hand.left {
+            transform: scaleX(-1);
+        }
+
+        .hand.active {
+            border-color: #00d2ff;
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+            transform: translateY(-10px) scale(1.1);
+        }
+
+        .hand.left.active {
+            transform: translateY(-10px) scale(-1.1);
+        }
+
+        /* Video Glow */
+        .video-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid #00d2ff;
+            border-radius: 20px;
+            pointer-events: none;
+            box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.2);
+            opacity: 0.5;
+        }
     </style>
 </head>
 
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">🤟 Imo-ishora AI</div>
+            <div class="logo">Imo-ishora AI</div>
             <div class="nav-links">
                 <a href="#" class="active" data-mode="deaf">Imo-ishora rejimi</a>
                 <a href="#" data-mode="hearing">Ovozli rejim</a>
@@ -459,8 +570,8 @@
             <p>Imo-ishora tili ↔ O'zbek tili | Sun'iy intellekt asosida real vaqtda tarjima</p>
 
             <div class="mode-selector">
-                <button class="mode-btn active" data-mode="deaf">🤟 Imo-ishora rejimi</button>
-                <button class="mode-btn" data-mode="hearing">🗣️ Ovozli rejim</button>
+                <button class="mode-btn active" data-mode="deaf">Imo-ishora rejimi</button>
+                <button class="mode-btn" data-mode="hearing">Ovozli rejim</button>
             </div>
         </div>
 
@@ -469,7 +580,7 @@
             <!-- Chap taraf: Kamera -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-icon">📹</div>
+                    <div class="card-icon">CAM</div>
                     <div>
                         <div class="card-title">Imo-ishora kamerasi</div>
                         <div class="card-subtitle">Qo'l harakatlaringizni ko'rsating</div>
@@ -495,10 +606,7 @@
                     <div class="translation-desc" id="deafDescription">Imo-ishorani ko'rsating</div>
 
                     <div class="sign-display" id="deafSigns">
-                        <div class="sign-item">
-                            <span class="sign-emoji">👋</span>
-                            <span class="sign-word">salom</span>
-                        </div>
+                        <!-- Signs will be injected here -->
                     </div>
 
                     <div class="voice-indicator">
@@ -518,7 +626,7 @@
             <!-- O'ng taraf: AI javob -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-icon">🤖</div>
+                    <div class="card-icon">AI</div>
                     <div>
                         <div class="card-title">AI tarjimon</div>
                         <div class="card-subtitle">Sun'iy intellekt javobi</div>
@@ -527,11 +635,11 @@
 
                 <div class="avatar-container">
                     <div class="avatar-3d" id="aiAvatar">
-                        🤖
+                        AI
                     </div>
                     <div class="avatar-hands">
-                        <div class="hand" id="leftHand">🖐️</div>
-                        <div class="hand" id="rightHand">🖐️</div>
+                        <div class="hand left" id="leftHand"><img src="assets/hand.png" alt="Hand"></div>
+                        <div class="hand" id="rightHand"><img src="assets/hand.png" alt="Hand"></div>
                     </div>
                 </div>
 
@@ -540,14 +648,7 @@
                         Salom! Qanday yordam kerak?
                     </div>
                     <div class="sign-display" id="aiResponseSigns">
-                        <div class="sign-item">
-                            <span class="sign-emoji">👋</span>
-                            <span class="sign-word">salom</span>
-                        </div>
-                        <div class="sign-item">
-                            <span class="sign-emoji">❓</span>
-                            <span class="sign-word">qanday</span>
-                        </div>
+                        <!-- AI signs will be injected here -->
                     </div>
                 </div>
             </div>
@@ -558,7 +659,7 @@
             <!-- Chap taraf: Mikrofon -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-icon">🎤</div>
+                    <div class="card-icon">MIC</div>
                     <div>
                         <div class="card-title">Ovozli kirish</div>
                         <div class="card-subtitle">Gapiring, AI imo-ishoraga aylantiradi</div>
@@ -566,7 +667,7 @@
                 </div>
 
                 <div class="voice-indicator" style="margin-bottom: 1rem;">
-                    <span>🎤 Mikrofon</span>
+                    <span>MIC</span>
                     <div class="voice-wave">
                         <div class="wave-bar" style="animation-delay: 0s"></div>
                         <div class="wave-bar" style="animation-delay: 0.1s"></div>
@@ -577,8 +678,8 @@
                 </div>
 
                 <div class="controls">
-                    <button class="btn btn-primary" id="startListening">🎤 Boshlash</button>
-                    <button class="btn btn-danger" id="stopListening">⏹ To'xtatish</button>
+                    <button class="btn btn-primary" id="startListening">MIC Boshlash</button>
+                    <button class="btn btn-danger" id="stopListening">To'xtatish</button>
                 </div>
 
                 <div class="translation-panel">
@@ -595,7 +696,7 @@
             <!-- O'ng taraf: Imo-ishora chiqish -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-icon">🤟</div>
+                    <div class="card-icon">SIGN</div>
                     <div>
                         <div class="card-title">Imo-ishora chiqish</div>
                         <div class="card-subtitle">AI imo-ishoraga aylantirdi</div>
@@ -607,8 +708,8 @@
                         🧑
                     </div>
                     <div class="avatar-hands">
-                        <div class="hand" id="signLeftHand">🖐️</div>
-                        <div class="hand" id="signRightHand">🖐️</div>
+                        <div class="hand left" id="signLeftHand"><img src="assets/hand.png" alt="Hand"></div>
+                        <div class="hand" id="signRightHand"><img src="assets/hand.png" alt="Hand"></div>
                     </div>
                 </div>
 
@@ -631,7 +732,7 @@
 
         <!-- Tarix paneli -->
         <div class="history-panel">
-            <h3 style="margin-bottom: 1rem;">📋 So'nggi tarjimalar</h3>
+            <h3 style="margin-bottom: 1rem;">Tarix</h3>
             <div id="historyList">
                 <div class="history-item">
                     <div class="history-icon">👤</div>
