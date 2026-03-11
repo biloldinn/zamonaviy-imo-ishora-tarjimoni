@@ -9,7 +9,7 @@ const PORT = 3000;
 
 // Gemini API
 const genAI = new GoogleGenerativeAI('AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI');
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 app.use(cors());
 app.use(express.json());
@@ -23,11 +23,7 @@ try {
     console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
 } catch (error) {
     console.error('❌ Lug\'atni yuklashda xato:', error);
-    // Zaxira lug'at
-    signDictionary = {
-        "salom": { "original": "Salom", "description": "Salomlashish" },
-        "rahmat": { "original": "Rahmat", "description": "Tashakkur" }
-    };
+    signDictionary = { "salom": { "original": "Salom", "description": "Salomlashish" } };
 }
 
 // API endpointlar
@@ -38,16 +34,13 @@ app.post('/api/translate/sign', async (req, res) => {
 
     if (signData) {
         try {
-            // Enhanced Prompt for a more "human" feel
-            const prompt = `Foydalanuvchi imo-ishora tili orqali quyidagilarni aytdi: "${signData.original}". 
-            Ushbu gapning tavsifi: "${signData.description}". 
-            Iltimos, ushbu ma'lumotga asoslanib, juda samimiy, do'stona va qisqa (1-2 gap) javob qaytar. 
-            Javobing faqat o'zbek tilida bo'lsin.
-            Agar foydalanuvchi "salom" desa, alik ol. Agar "rahmat" desa, xursand bo'l.`;
+            const prompt = `Siz Imo-ishora AI yordamchisiz. Foydalanuvchi "${signData.original}" belgisini ko'rsatdi.
+            Ushbu belgining tavsifi: "${signData.description}".
+            Faqat ushbu ma'lumotga asoslanib, o'zbek tilida juda samimiy va qisqa (1 ta gap) javob bering.
+            Stiker yoki emojilardan foydalanmang. Do'stona munosabat bildiring.`;
 
             const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const textResponse = response.text();
+            const textResponse = result.response.text();
 
             res.json({
                 success: true,
@@ -58,18 +51,22 @@ app.post('/api/translate/sign', async (req, res) => {
             });
         } catch (error) {
             console.error('AI Error:', error);
-            res.json({
-                success: true,
-                translation: signData.original,
-                aiResponse: "Tushunarlik! Qanday yordam bera olaman?",
-                sign: sign
-            });
+            res.status(500).json({ success: false, error: 'AI tahlilida xatolik' });
         }
     } else {
-        res.status(404).json({
-            success: false,
-            message: "Kuzatilgan imo-ishora lug'atda topilmadi."
-        });
+        res.status(404).json({ success: false, error: 'Belgi topilmadi' });
+    }
+});
+
+app.post('/api/chat', async (req, res) => {
+    const { message } = req.body;
+    try {
+        const prompt = `Siz Imo-ishora AI yordamchisiz. Foydalanuvchi aytdi: "${message}". 
+        Unga o'zbek tilida qisqa va do'stona javob bering.`;
+        const result = await model.generateContent(prompt);
+        res.json({ success: true, aiResponse: result.response.text() });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Chat xatosi' });
     }
 });
 

@@ -26,6 +26,68 @@ let isListening = false;
 // Imo-ishora lug'ati (Backend'dan yuklanadi)
 let signDictionary = {};
 
+// LocalStorage Manager for persistence
+const storage = {
+    get: (key, defaultValue) => JSON.parse(localStorage.getItem(key)) || defaultValue,
+    set: (key, value) => localStorage.setItem(key, JSON.stringify(value)),
+    clear: () => localStorage.clear()
+};
+
+// Initial Settings
+let settings = storage.get('appSettings', {
+    speechRate: 1.0,
+    speechVolume: 1.0,
+    mirrorMode: true,
+    showSkeleton: true,
+    keepHistory: true
+});
+
+let historyList = storage.get('translationHistory', []);
+let quizHighScore = storage.get('quizHighScore', 0);
+
+// Initialize Settings UI
+function initSettingsUI() {
+    document.getElementById('speechRate').value = settings.speechRate;
+    document.getElementById('speechVolume').value = settings.speechVolume;
+    document.getElementById('mirrorMode').checked = settings.mirrorMode;
+    document.getElementById('showSkeleton').checked = settings.showSkeleton;
+    document.getElementById('keepHistory').checked = settings.keepHistory;
+
+    // Apply mirror mode
+    updateMirrorMode();
+}
+
+function updateMirrorMode() {
+    const transform = settings.mirrorMode ? 'scaleX(-1)' : 'scaleX(1)';
+    deafVideo.style.transform = transform;
+    deafCanvas.style.transform = transform;
+    quizVideo.style.transform = transform;
+    quizCanvas.style.transform = transform;
+}
+
+// Settings Event Listeners
+document.getElementById('openSettings').onclick = () => document.getElementById('settingsModal').style.display = 'flex';
+document.getElementById('closeSettings').onclick = () => {
+    settings = {
+        speechRate: parseFloat(document.getElementById('speechRate').value),
+        speechVolume: parseFloat(document.getElementById('speechVolume').value),
+        mirrorMode: document.getElementById('mirrorMode').checked,
+        showSkeleton: document.getElementById('showSkeleton').checked,
+        keepHistory: document.getElementById('keepHistory').checked
+    };
+    storage.set('appSettings', settings);
+    updateMirrorMode();
+    document.getElementById('settingsModal').style.display = 'none';
+};
+
+document.getElementById('resetData').onclick = () => {
+    if (confirm('Barcha ma\'lumotlarni (tarix va ballar) o\'chirishni xohlaysizmi?')) {
+        storage.clear();
+        location.reload();
+    }
+};
+
+// Imo-ishora lug'ati
 async function loadDictionary() {
     try {
         const response = await fetch(`${API_URL}/api/dictionary`);
@@ -33,15 +95,12 @@ async function loadDictionary() {
         if (data.success) {
             signDictionary = data.dictionary;
             console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
-            displayLibrary(); // Initial library render
+            displayLibrary();
+            initSettingsUI();
+            renderHistory(); // Render persisted history
         }
     } catch (error) {
         console.error('❌ Lug\'atni yuklashda xato:', error);
-        signDictionary = {
-            "salom": { "original": "Salom", "description": "Salomlashish" },
-            "rahmat": { "original": "Rahmat", "description": "Tashakkur" }
-        };
-        displayLibrary();
     }
 }
 
@@ -51,7 +110,6 @@ loadDictionary();
 hands.onResults((results) => {
     if (!isCameraRunning && !isQuizRunning) return;
 
-    // Determine which canvas to use
     const activeCanvas = isQuizRunning ? quizCanvas : deafCanvas;
     const activeCtx = isQuizRunning ? quizCtx : deafCtx;
 
@@ -63,30 +121,21 @@ hands.onResults((results) => {
     activeCtx.drawImage(results.image, 0, 0, activeCanvas.width, activeCanvas.height);
 
     if (results.multiHandLandmarks) {
-        for (const landmarks of results.multiHandLandmarks) {
-            // Realistic "Skeleton" Look
-            drawConnectors(activeCtx, landmarks, HAND_CONNECTIONS, {
-                color: 'rgba(0, 210, 255, 0.8)',
-                lineWidth: 5
-            });
-            drawLandmarks(activeCtx, landmarks, {
-                color: '#ffffff',
-                fillColor: '#3a7bd5',
-                radius: 4
-            });
-
-            // Highlight fingertips for "Active" feel
-            const fingertips = [4, 8, 12, 16, 20];
-            fingertips.forEach(idx => {
-                const lm = landmarks[idx];
-                activeCtx.beginPath();
-                activeCtx.arc(lm.x * activeCanvas.width, lm.y * activeCanvas.height, 8, 0, 2 * Math.PI);
-                activeCtx.fillStyle = 'rgba(0, 210, 255, 0.3)';
-                activeCtx.fill();
-            });
+        if (settings.showSkeleton) {
+            for (const landmarks of results.multiHandLandmarks) {
+                // Realistic "Skeleton" Look
+                drawConnectors(activeCtx, landmarks, HAND_CONNECTIONS, {
+                    color: 'rgba(0, 210, 255, 0.8)',
+                    lineWidth: 5
+                });
+                drawLandmarks(activeCtx, landmarks, {
+                    color: '#ffffff',
+                    fillColor: '#3a7bd5',
+                    radius: 4
+                });
+            }
         }
-
-        // Detect sign
+        // Always detect sign
         detectSign(results.multiHandLandmarks);
     }
 
@@ -169,41 +218,28 @@ function displayDetectedSign(signKey, signData) {
     addToHistory('imo-ishora', signData.original);
 }
 
-// AI javob olish
-async function getAIResponse(userMessage) {
+// AI javob olish (Routing through Backend to fix "Analyzing" hang)
+async function getAIResponse(signName) {
     try {
         document.getElementById('deafLoading').style.display = 'inline-block';
+        document.getElementById('aiResponseText').textContent = 'Tahlil qilinmoqda...';
 
-        // Gemini API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`, {
+        const response = await fetch(`${API_URL}/api/translate/sign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `Foydalanuvchi imo-ishora orqali aytdi: "${userMessage}". 
-                        Unga qisqa, do'stona javob qaytar. Javobing 2-3 jumladan oshmasin.
-                        Agar uyga ketayotgan bo'lsa, xayrlash.`
-                    }]
-                }]
-            })
+            body: JSON.stringify({ sign: signName })
         });
 
         const data = await response.json();
-        const aiResponse = data.candidates[0].content.parts[0].text;
-
-        // AI javobini ko'rsatish
-        document.getElementById('aiResponseText').textContent = aiResponse;
-
-        // AI javobini imo-ishoraga aylantirish
-        textToSigns(aiResponse);
-
-        // Tarixga qo'shish
-        addToHistory('ai', aiResponse);
-
+        if (data.success) {
+            document.getElementById('aiResponseText').textContent = data.aiResponse;
+            updateAvatar(data.aiResponse);
+            textToSigns(data.aiResponse);
+            addToHistory('ai', data.aiResponse);
+        }
     } catch (error) {
         console.error('AI xatosi:', error);
-        document.getElementById('aiResponseText').textContent = 'Kechirasiz, xatolik yuz berdi';
+        document.getElementById('aiResponseText').textContent = 'Kechirasiz, AI bilan bog\'lanishda xatolik.';
     } finally {
         document.getElementById('deafLoading').style.display = 'none';
     }
@@ -274,30 +310,22 @@ if (speechSynthesis.onvoiceschanged !== undefined) {
 }
 
 function speakText(text) {
-    if (!synth) return;
-
-    // Wait for voices to load if needed
-    if (voices.length === 0) {
-        loadVoices();
-    }
+    if (!synth || !text) return;
 
     const utterance = new SpeechSynthesisUtterance(text);
 
-    // Find best voice (Prefer Uzbek, then Turkish as a close sound, then any)
+    // Uyg'unlashgan sozlamalar
+    utterance.rate = settings.speechRate || 1.0;
+    utterance.volume = settings.speechVolume || 1.0;
+
+    // Find best voice
+    if (voices.length === 0) loadVoices();
     let selectedVoice = voices.find(v => v.lang.includes('uz') || v.lang.includes('UZ'));
-    if (!selectedVoice) {
-        selectedVoice = voices.find(v => v.lang.includes('tr') || v.lang.includes('TR'));
-    }
+    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('tr') || v.lang.includes('TR'));
 
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
-    }
-
+    if (selectedVoice) utterance.voice = selectedVoice;
     utterance.lang = 'uz-UZ';
-    utterance.rate = 0.9; // Slightly slower for clarity
-    utterance.pitch = 1.0;
 
-    // Important: cancel current speaking before starting new
     synth.cancel();
     synth.speak(utterance);
 }
@@ -405,31 +433,42 @@ function updateSignAvatar(text) {
 }
 
 // Tarixga qo'shish
+// Tarixni saqlash va ko'rsatish
 function addToHistory(type, text) {
-    const historyList = document.getElementById('historyList');
-    const historyItem = document.createElement('div');
-    historyItem.className = 'history-item';
-
-    const icon = type === 'imo-ishora' ? '👤' : type === 'ai' ? '🤖' : '🗣️';
-    const typeText = type === 'imo-ishora' ? 'Imo-ishora → Matn' :
-        type === 'ai' ? 'AI javob' : 'Matn → Imo-ishora';
+    if (!settings.keepHistory) return;
 
     const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+    const item = { type, text, time };
 
-    historyItem.innerHTML = `
-        <div class="history-icon">${icon}</div>
-        <div class="history-text">
-            <div><strong>${typeText}:</strong> ${text.substring(0, 50)}${text.length > 50 ? '...' : ''}</div>
-            <div class="history-time">${time}</div>
-        </div>
-    `;
+    historyList.unshift(item);
+    if (historyList.length > 20) historyList.pop();
 
-    historyList.insertBefore(historyItem, historyList.firstChild);
+    storage.set('translationHistory', historyList);
+    renderHistory();
+}
 
-    // 10 tadan ko'p bo'lmasin
-    if (historyList.children.length > 10) {
-        historyList.removeChild(historyList.lastChild);
-    }
+function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    historyList.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+
+        const icon = item.type === 'imo-ishora' ? '👤' : item.type === 'ai' ? '🤖' : '🗣️';
+        const typeText = item.type === 'imo-ishora' ? 'Imo-ishora → Matn' :
+            item.type === 'ai' ? 'AI javob' : 'Matn → Imo-ishora';
+
+        div.innerHTML = `
+            <div class="history-icon">${icon}</div>
+            <div class="history-text">
+                <div><strong>${typeText}:</strong> ${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
+                <div class="history-time">${item.time}</div>
+            </div>
+        `;
+        list.appendChild(div);
+    });
 }
 
 // Kamerani boshlash
