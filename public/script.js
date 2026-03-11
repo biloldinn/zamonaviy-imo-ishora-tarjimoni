@@ -33,14 +33,15 @@ async function loadDictionary() {
         if (data.success) {
             signDictionary = data.dictionary;
             console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
+            displayLibrary(); // Initial library render
         }
     } catch (error) {
         console.error('❌ Lug\'atni yuklashda xato:', error);
-        // Zaxira lug'at (prototype uchun)
         signDictionary = {
             "salom": { "original": "Salom", "description": "Salomlashish" },
             "rahmat": { "original": "Rahmat", "description": "Tashakkur" }
         };
+        displayLibrary();
     }
 }
 
@@ -48,23 +49,27 @@ loadDictionary();
 
 // MediaPipe natijalari
 hands.onResults((results) => {
-    if (!isDeafMode || !isCameraRunning) return;
+    if (!isCameraRunning && !isQuizRunning) return;
 
-    deafCtx.save();
-    deafCtx.clearRect(0, 0, deafCanvas.width, deafCanvas.height);
+    // Determine which canvas to use
+    const activeCanvas = isQuizRunning ? quizCanvas : deafCanvas;
+    const activeCtx = isQuizRunning ? quizCtx : deafCtx;
+
+    activeCtx.save();
+    activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
 
     // Smooth image drawing
-    deafCtx.globalAlpha = 1.0;
-    deafCtx.drawImage(results.image, 0, 0, deafCanvas.width, deafCanvas.height);
+    activeCtx.globalAlpha = 1.0;
+    activeCtx.drawImage(results.image, 0, 0, activeCanvas.width, activeCanvas.height);
 
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
             // Realistic "Skeleton" Look
-            drawConnectors(deafCtx, landmarks, HAND_CONNECTIONS, {
+            drawConnectors(activeCtx, landmarks, HAND_CONNECTIONS, {
                 color: 'rgba(0, 210, 255, 0.8)',
                 lineWidth: 5
             });
-            drawLandmarks(deafCtx, landmarks, {
+            drawLandmarks(activeCtx, landmarks, {
                 color: '#ffffff',
                 fillColor: '#3a7bd5',
                 radius: 4
@@ -74,10 +79,10 @@ hands.onResults((results) => {
             const fingertips = [4, 8, 12, 16, 20];
             fingertips.forEach(idx => {
                 const lm = landmarks[idx];
-                deafCtx.beginPath();
-                deafCtx.arc(lm.x * deafCanvas.width, lm.y * deafCanvas.height, 8, 0, 2 * Math.PI);
-                deafCtx.fillStyle = 'rgba(0, 210, 255, 0.3)';
-                deafCtx.fill();
+                activeCtx.beginPath();
+                activeCtx.arc(lm.x * activeCanvas.width, lm.y * activeCanvas.height, 8, 0, 2 * Math.PI);
+                activeCtx.fillStyle = 'rgba(0, 210, 255, 0.3)';
+                activeCtx.fill();
             });
         }
 
@@ -85,7 +90,7 @@ hands.onResults((results) => {
         detectSign(results.multiHandLandmarks);
     }
 
-    deafCtx.restore();
+    activeCtx.restore();
 });
 
 let lastSign = '';
@@ -471,42 +476,140 @@ function stopDeafCamera() {
     deafCtx.clearRect(0, 0, deafCanvas.width, deafCanvas.height);
 }
 
-// Rejim almashtirish
-document.querySelectorAll('[data-mode]').forEach(link => {
+// Rejim almashtirish (Navigation)
+document.querySelectorAll('[data-nav]').forEach(link => {
     link.addEventListener('click', (e) => {
         e.preventDefault();
 
-        document.querySelectorAll('[data-mode]').forEach(l => l.classList.remove('active'));
+        document.querySelectorAll('[data-nav]').forEach(l => l.classList.remove('active'));
         link.classList.add('active');
 
-        const mode = link.dataset.mode;
-        isDeafMode = mode === 'deaf';
+        const nav = link.dataset.nav;
 
-        document.getElementById('deafMode').style.display = isDeafMode ? 'grid' : 'none';
-        document.getElementById('hearingMode').style.display = isDeafMode ? 'none' : 'grid';
+        // Hide all sections
+        const hero = document.querySelector('.hero');
+        const translateMode = document.getElementById('deafMode');
+        const hearingMode = document.getElementById('hearingMode');
+        const librarySection = document.getElementById('librarySection');
+        const quizSection = document.getElementById('quizSection');
+        const historySection = document.getElementById('historySection');
 
-        if (!isDeafMode && isCameraRunning) {
-            stopDeafCamera();
+        [hero, translateMode, hearingMode, librarySection, quizSection, historySection].forEach(s => {
+            if (s) s.style.display = 'none';
+        });
+
+        stopDeafCamera();
+        stopQuizCamera();
+        stopSpeechRecognition();
+
+        if (nav === 'translate') {
+            hero.style.display = 'block';
+            translateMode.style.display = 'grid';
+            historySection.style.display = 'block';
+        } else if (nav === 'library') {
+            librarySection.style.display = 'block';
+        } else if (nav === 'quiz') {
+            quizSection.style.display = 'block';
         }
     });
 });
 
-document.querySelectorAll('.mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+// Library Logic
+function displayLibrary(filter = '') {
+    const list = document.getElementById('libraryList');
+    if (!list) return;
 
-        const mode = btn.dataset.mode;
-        isDeafMode = mode === 'deaf';
+    list.innerHTML = '';
+    const entries = Object.entries(signDictionary);
 
-        document.getElementById('deafMode').style.display = isDeafMode ? 'grid' : 'none';
-        document.getElementById('hearingMode').style.display = isDeafMode ? 'none' : 'grid';
-
-        if (!isDeafMode && isCameraRunning) {
-            stopDeafCamera();
+    entries.forEach(([key, data]) => {
+        if (key.includes(filter.toLowerCase())) {
+            const item = document.createElement('div');
+            item.className = 'card';
+            item.style.padding = '1.5rem';
+            item.style.textAlign = 'center';
+            item.innerHTML = `
+                <div class="sign-label" style="margin-bottom: 0.5rem;">${key.toUpperCase()}</div>
+                <div style="font-size: 0.8rem; color: #aaa;">${data.original}</div>
+                <button class="btn btn-outline" style="margin-top: 1rem; width: 100%; font-size: 0.8rem;" onclick="speakText('${data.original}')">🔊 Eshitish</button>
+            `;
+            list.appendChild(item);
         }
     });
+}
+
+document.getElementById('librarySearch').addEventListener('input', (e) => {
+    displayLibrary(e.target.value);
 });
+
+// Quiz Logic
+let currentQuizTarget = '';
+let quizScore = 0;
+let isQuizRunning = false;
+const quizVideo = document.getElementById('quizVideo');
+const quizCanvas = document.getElementById('quizCanvas');
+const quizCtx = quizCanvas.getContext('2d');
+
+async function startQuiz() {
+    const signs = Object.keys(signDictionary);
+    if (signs.length === 0) return;
+
+    currentQuizTarget = signs[Math.floor(Math.random() * signs.length)];
+    document.getElementById('targetSign').textContent = currentQuizTarget.toUpperCase();
+    document.getElementById('quizStatus').textContent = 'Belgini ko\'rsating...';
+    document.getElementById('skipQuiz').style.display = 'inline-block';
+    document.getElementById('startQuiz').style.display = 'none';
+
+    if (!isQuizRunning) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            quizVideo.srcObject = stream;
+            await quizVideo.play();
+
+            quizCanvas.width = quizVideo.videoWidth;
+            quizCanvas.height = quizVideo.videoHeight;
+
+            isQuizRunning = true;
+            runQuizDetection();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+}
+
+async function runQuizDetection() {
+    if (!isQuizRunning) return;
+    await hands.send({ image: quizVideo });
+    requestAnimationFrame(runQuizDetection);
+}
+
+document.getElementById('skipQuiz').addEventListener('click', startQuiz);
+
+// Update performDetection to handle Quiz
+const originalDetectSign = detectSign;
+detectSign = async function (multiHandLandmarks) {
+    await originalDetectSign(multiHandLandmarks);
+
+    if (isQuizRunning && lastSign === currentQuizTarget && signCount >= 10) {
+        quizScore++;
+        document.getElementById('quizScore').textContent = quizScore;
+        document.getElementById('quizStatus').textContent = 'To\'g\'ri! Keyingi belgi...';
+
+        // Next question
+        setTimeout(startQuiz, 2000);
+        signCount = 0;
+    }
+};
+
+function stopQuizCamera() {
+    isQuizRunning = false;
+    if (quizVideo.srcObject) {
+        quizVideo.srcObject.getTracks().forEach(t => t.stop());
+        quizVideo.srcObject = null;
+    }
+}
+
+document.getElementById('startQuiz').addEventListener('click', startQuiz);
 
 // Tugmalar
 document.getElementById('startDeafCamera').addEventListener('click', startDeafCamera);
@@ -524,13 +627,15 @@ document.getElementById('speakTranslation').addEventListener('click', () => {
 
 function drawConnectors(ctx, landmarks, connections, options) {
     if (!landmarks || !connections) return;
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
     for (const connection of connections) {
         const from = landmarks[connection[0]];
         const to = landmarks[connection[1]];
         if (from && to) {
             ctx.beginPath();
-            ctx.moveTo(from.x * deafCanvas.width, from.y * deafCanvas.height);
-            ctx.lineTo(to.x * deafCanvas.width, to.y * deafCanvas.height);
+            ctx.moveTo(from.x * width, from.y * height);
+            ctx.lineTo(to.x * width, to.y * height);
             ctx.strokeStyle = options.color || '#00FF00';
             ctx.lineWidth = options.lineWidth || 2;
             ctx.lineCap = 'round';
@@ -541,9 +646,11 @@ function drawConnectors(ctx, landmarks, connections, options) {
 
 function drawLandmarks(ctx, landmarks, options) {
     if (!landmarks) return;
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
     for (const landmark of landmarks) {
         ctx.beginPath();
-        ctx.arc(landmark.x * deafCanvas.width, landmark.y * deafCanvas.height, options.radius || 2, 0, 2 * Math.PI);
+        ctx.arc(landmark.x * width, landmark.y * height, options.radius || 2, 0, 2 * Math.PI);
         ctx.fillStyle = options.fillColor || '#FF0000';
         ctx.fill();
         ctx.strokeStyle = options.color || '#ffffff';

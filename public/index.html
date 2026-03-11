@@ -556,10 +556,12 @@
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">Imo-ishora AI</div>
+            <div class="logo" style="cursor: pointer;"
+                onclick="document.querySelector('[data-nav=\'translate\']').click()">Imo-ishora AI</div>
             <div class="nav-links">
-                <a href="#" class="active" data-mode="deaf">Imo-ishora rejimi</a>
-                <a href="#" data-mode="hearing">Ovozli rejim</a>
+                <a href="#" class="active" data-nav="translate">Tarjimon</a>
+                <a href="#" data-nav="library">Lug'at</a>
+                <a href="#" data-nav="quiz">Test</a>
             </div>
         </div>
     </nav>
@@ -730,23 +732,82 @@
             </div>
         </div>
 
-        <!-- Tarix paneli -->
-        <div class="history-panel">
-            <h3 style="margin-bottom: 1rem;">Tarix</h3>
-            <div id="historyList">
-                <div class="history-item">
-                    <div class="history-icon">👤</div>
-                    <div class="history-text">
-                        <div><strong>Imo-ishora → Matn:</strong> Men uyga ketyapman</div>
-                        <div class="history-time">2 daqiqa oldin</div>
+        <!-- Lug'at bo'limi -->
+        <div id="librarySection" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">LIB</div>
+                    <div>
+                        <div class="card-title">Imo-ishora lug'ati</div>
+                        <div class="card-subtitle">Barcha 720+ belgilarni ko'ring va qidiring</div>
                     </div>
                 </div>
-                <div class="history-item">
-                    <div class="history-icon">🗣️</div>
-                    <div class="history-text">
-                        <div><strong>Matn → Imo-ishora:</strong> Salom, qanday siz?</div>
-                        <div class="history-time">5 daqiqa oldin</div>
+
+                <div style="margin-bottom: 2rem;">
+                    <input type="text" id="librarySearch" placeholder="Belgini qidiring..."
+                        style="width: 100%; padding: 1.2rem 2rem; border-radius: 50px; background: rgba(255,255,255,0.05); border: 1px solid rgba(0,210,255,0.2); color: white; font-size: 1.1rem; outline: none; transition: all 0.3s; margin-top: 1rem;">
+                </div>
+
+                <div id="libraryList"
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; max-height: 600px; overflow-y: auto; padding-right: 1rem;">
+                    <!-- Library items will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz bo'limi -->
+        <div id="quizSection" style="display: none;">
+            <div class="translator-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">TEST</div>
+                        <div>
+                            <div class="card-title">Bilimingizni sinang</div>
+                            <div class="card-subtitle">AI sizga so'z beradi, siz belgini ko'rsating</div>
+                        </div>
                     </div>
+
+                    <div class="video-container">
+                        <video id="quizVideo" autoplay playsinline></video>
+                        <canvas id="quizCanvas"></canvas>
+                    </div>
+
+                    <div class="controls">
+                        <button class="btn btn-primary" id="startQuiz">▶ Testni boshlash</button>
+                        <button class="btn btn-outline" id="skipQuiz" style="display: none;">O'tkazib yuborish
+                            ➔</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon">Q</div>
+                        <div>
+                            <div class="card-title">Savol</div>
+                            <div class="card-subtitle">Ushbu belgini ko'rsating:</div>
+                        </div>
+                    </div>
+
+                    <div class="translation-panel"
+                        style="background: rgba(0,210,255,0.1); border: 2px dashed #00d2ff; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 300px;">
+                        <div class="translation-text" id="targetSign" style="font-size: 3rem;">...</div>
+                        <div class="translation-desc" id="quizStatus" style="font-size: 1.2rem; color: #aaa;">Testni
+                            boshlang</div>
+
+                        <div id="scoreBoard" style="margin-top: 2rem; font-size: 1.5rem; font-weight: bold;">
+                            Ball: <span id="quizScore">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarix paneli (Faqat tarjimon bo'limida ko'rinadi) -->
+        <div id="historySection">
+            <div class="history-panel">
+                <h3 style="margin-bottom: 1rem;">Tarix</h3>
+                <div id="historyList">
+                    <!-- History items -->
                 </div>
             </div>
         </div>
