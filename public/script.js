@@ -63,6 +63,9 @@ function updateMirrorMode() {
     deafCanvas.style.transform = transform;
     quizVideo.style.transform = transform;
     quizCanvas.style.transform = transform;
+
+    // Also flip the context for persistent drawing if needed
+    // But since we use results.image, we'll handle mirroring during drawImage
 }
 
 // Settings Event Listeners
@@ -116,31 +119,66 @@ hands.onResults((results) => {
     activeCtx.save();
     activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
 
-    // Smooth image drawing
+    // Drawing the background video
+    if (settings.mirrorMode) {
+        activeCtx.translate(activeCanvas.width, 0);
+        activeCtx.scale(-1, 1);
+    }
+
     activeCtx.globalAlpha = 1.0;
     activeCtx.drawImage(results.image, 0, 0, activeCanvas.width, activeCanvas.height);
 
     if (results.multiHandLandmarks) {
-        if (settings.showSkeleton) {
-            for (const landmarks of results.multiHandLandmarks) {
-                // Realistic "Skeleton" Look
-                drawConnectors(activeCtx, landmarks, HAND_CONNECTIONS, {
-                    color: 'rgba(0, 210, 255, 0.8)',
-                    lineWidth: 5
-                });
-                drawLandmarks(activeCtx, landmarks, {
-                    color: '#ffffff',
-                    fillColor: '#3a7bd5',
-                    radius: 4
-                });
+        // Reset transform for drawing markers if we want them aligned with the CSS flip
+        // Actually, if context is flipped, markers will be flipped too. 
+        // We want markers to stay on hands.
+
+        for (const landmarks of results.multiHandLandmarks) {
+            if (settings.showSkeleton) {
+                // Professional Hand Image Overlay instead of skeleton
+                drawHandImage(activeCtx, landmarks);
             }
+
+            // Subtle joint points for tracking feedback
+            drawLandmarks(activeCtx, landmarks, {
+                color: '#00d2ff',
+                fillColor: '#ffffff',
+                radius: 2
+            });
         }
+
         // Always detect sign
         detectSign(results.multiHandLandmarks);
     }
 
     activeCtx.restore();
 });
+
+// New function to draw hand image over joints
+function drawHandImage(ctx, landmarks) {
+    const handImg = document.querySelector('#rightHand img') || document.querySelector('#leftHand img');
+    if (!handImg || !handImg.complete) return;
+
+    // Use palm center and wrist to scale/rotate
+    const wrist = landmarks[0];
+    const middleFingerMCP = landmarks[9];
+
+    const centerX = middleFingerMCP.x * ctx.canvas.width;
+    const centerY = middleFingerMCP.y * ctx.canvas.height;
+
+    // Simple scaling based on palm size
+    const dx = (middleFingerMCP.x - wrist.x) * ctx.canvas.width;
+    const dy = (middleFingerMCP.y - wrist.y) * ctx.canvas.height;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const size = distance * 4;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    // Draw semi-transparent professional hand highlight
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(handImg, -size / 2, -size / 2, size, size);
+    ctx.restore();
+}
 
 let lastSign = '';
 let signCount = 0;
@@ -303,14 +341,20 @@ let voices = [];
 
 function loadVoices() {
     voices = synth.getVoices();
+    console.log("Voices loaded:", voices.length);
 }
 
+// Ensure voices are loaded
+loadVoices();
 if (speechSynthesis.onvoiceschanged !== undefined) {
     speechSynthesis.onvoiceschanged = loadVoices;
 }
 
 function speakText(text) {
     if (!synth || !text) return;
+
+    // Cancel any ongoing speech
+    synth.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
 
@@ -319,15 +363,19 @@ function speakText(text) {
     utterance.volume = settings.speechVolume || 1.0;
 
     // Find best voice
-    if (voices.length === 0) loadVoices();
-    let selectedVoice = voices.find(v => v.lang.includes('uz') || v.lang.includes('UZ'));
-    if (!selectedVoice) selectedVoice = voices.find(v => v.lang.includes('tr') || v.lang.includes('TR'));
+    if (voices.length === 0) voices = synth.getVoices();
+
+    // Priority: Uzbek -> Turkish -> Russian -> English
+    let selectedVoice = voices.find(v => v.lang.includes('uz')) ||
+        voices.find(v => v.lang.includes('tr')) ||
+        voices.find(v => v.lang.includes('ru')) ||
+        voices.find(v => v.default);
 
     if (selectedVoice) utterance.voice = selectedVoice;
-    utterance.lang = 'uz-UZ';
+    utterance.lang = selectedVoice ? selectedVoice.lang : 'uz-UZ';
 
-    synth.cancel();
     synth.speak(utterance);
+    console.log("Speaking:", text);
 }
 
 // Ovozli kirish (Speech-to-Text)
