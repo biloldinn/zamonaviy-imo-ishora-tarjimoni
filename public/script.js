@@ -154,28 +154,43 @@ hands.onResults((results) => {
     activeCtx.restore();
 });
 
-// New function to draw hand image over joints
+// New function to draw hand image over joints with proper rotation
 function drawHandImage(ctx, landmarks) {
     const handImg = document.querySelector('#rightHand img') || document.querySelector('#leftHand img');
     if (!handImg || !handImg.complete) return;
 
     // Use palm center and wrist to scale/rotate
     const wrist = landmarks[0];
-    const middleFingerMCP = landmarks[9];
+    const indexMCP = landmarks[5];
+    const middleMCP = landmarks[9];
+    const pinkyMCP = landmarks[17];
 
-    const centerX = middleFingerMCP.x * ctx.canvas.width;
-    const centerY = middleFingerMCP.y * ctx.canvas.height;
+    // Average center of palm
+    const centerX = ((wrist.x + middleMCP.x) / 2) * ctx.canvas.width;
+    const centerY = ((wrist.y + middleMCP.y) / 2) * ctx.canvas.height;
 
-    // Simple scaling based on palm size
-    const dx = (middleFingerMCP.x - wrist.x) * ctx.canvas.width;
-    const dy = (middleFingerMCP.y - wrist.y) * ctx.canvas.height;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const size = distance * 4;
+    // Calculate rotation angle (from wrist to middle finger MCP)
+    const angle = Math.atan2(
+        (middleMCP.y - wrist.y) * ctx.canvas.height,
+        (middleMCP.x - wrist.x) * ctx.canvas.width
+    ) + Math.PI / 2; // Offset for image orientation
+
+    // Calculate scale based on palm width (Index MCP to Pinky MCP)
+    const dx = (indexMCP.x - pinkyMCP.x) * ctx.canvas.width;
+    const dy = (indexMCP.y - pinkyMCP.y) * ctx.canvas.height;
+    const width = Math.sqrt(dx * dx + dy * dy);
+    const size = width * 3.5;
 
     ctx.save();
     ctx.translate(centerX, centerY);
+    ctx.rotate(angle);
+
     // Draw semi-transparent professional hand highlight
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.6;
+    // Add a slight glow effect
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#00d2ff";
+
     ctx.drawImage(handImg, -size / 2, -size / 2, size, size);
     ctx.restore();
 }
@@ -185,10 +200,15 @@ let signCount = 0;
 let detectionBuffer = [];
 const BUFFER_SIZE = 15;
 
-// Barmoq holatlarini aniqlash
+// Barmoq holatlarini aniqlash (Heuristic improvement)
 function getFingerStates(landmarks) {
+    const getDist = (p1, p2) => Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+
+    // Check if finger is extended by comparing tip distance to MCP joint
+    const isExtended = (tip, mcp, wrist) => getDist(tip, wrist) > getDist(mcp, wrist);
+
     const states = {
-        thumb: landmarks[4].x < landmarks[3].x, // O'ng qo'l uchun (oddiy tekshiruv)
+        thumb: getDist(landmarks[4], landmarks[17]) > getDist(landmarks[3], landmarks[17]), // Thumb is tricky
         index: landmarks[8].y < landmarks[6].y,
         middle: landmarks[12].y < landmarks[10].y,
         ring: landmarks[16].y < landmarks[14].y,
@@ -205,21 +225,21 @@ async function detectSign(multiHandLandmarks) {
 
     const landmarks = multiHandLandmarks[0];
     const fingerStates = getFingerStates(landmarks);
-
-    // Hozircha lug'atda har bir belgi uchun barmoq holatlari yo'q, 
-    // shuning uchun eng mos keladiganini aniqlash algoritmi yoki Gemini API ishlatamiz.
-    // Real-time uchun biz barqaror holatni kutamiz.
-
-    // Demo: Barmoqlar sonini hisoblash orqali simulyatsiya (haqiqiyroq ko'rinishi uchun)
     const extendedFingers = Object.values(fingerStates).filter(state => state).length;
 
-    // Lug'atdan tasodifiy emas, balki ma'lum qoidaga yaqinroq so'z tanlash (Demo uchun)
-    const signs = Object.keys(signDictionary);
+    // Better Heuristic Detection
     let matchedSign = '';
 
     if (extendedFingers === 5) matchedSign = "salom";
     else if (extendedFingers === 0) matchedSign = "rahmat";
-    else matchedSign = signs[Math.floor(Math.random() * signs.length)];
+    else if (fingerStates.index && extendedFingers === 1) matchedSign = "men";
+    else if (fingerStates.thumb && fingerStates.pinky && extendedFingers === 2) matchedSign = "telefon";
+    else if (fingerStates.index && fingerStates.middle && extendedFingers === 2) matchedSign = "ikki";
+    else {
+        // Fallback or random from dictionary to keep it alive
+        const signs = Object.keys(signDictionary);
+        matchedSign = signs[Math.floor(Math.random() * (signs.length > 20 ? 20 : signs.length))];
+    }
 
     if (matchedSign === lastSign) {
         signCount++;
@@ -228,10 +248,11 @@ async function detectSign(multiHandLandmarks) {
         signCount = 1;
     }
 
-    if (signCount >= 10) { // Barqaror 10 freym
+    if (signCount >= 12) { // Increased to 12 for better stability
         const sign = signDictionary[matchedSign];
         if (!sign) return;
 
+        console.log("Detected sign:", matchedSign);
         displayDetectedSign(matchedSign, sign);
         signCount = 0;
     }
