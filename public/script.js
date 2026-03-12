@@ -193,7 +193,12 @@ function init3DHand() {
     }
 
     // Connect joints with cylinders
-    const boneMaterial = new THREE.MeshPhongMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.4 });
+    const boneMaterial = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.6,
+        metalness: 1.0
+    });
     const connections = [
         [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
         [0, 5], [5, 6], [6, 7], [7, 8], // Index
@@ -242,17 +247,54 @@ function update3DHand(landmarks) {
     });
 
     // Update cylinders
-    scene.children[2].children.forEach(child => {
-        if (child.userData.from !== undefined) {
-            const p1 = joints[child.userData.from].position;
-            const p2 = joints[child.userData.to].position;
-            const dist = p1.distanceTo(p2);
-            child.position.copy(p1).lerp(p2, 0.5);
-            child.scale.set(1, dist, 1);
-            child.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
-        }
+    const cylindersGroup = handGroup.children.filter(child => child.userData.from !== undefined);
+    cylindersGroup.forEach(child => {
+        const p1 = joints[child.userData.from].position;
+        const p2 = joints[child.userData.to].position;
+        const dist = p1.distanceTo(p2);
+
+        child.position.copy(p1).lerp(p2, 0.5);
+        child.scale.set(1, dist, 1);
+        child.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
     });
 }
+
+// POSES LIBRARY FOR VOICE-TO-SIGN
+const HAND_POSES = {
+    'idle': Array(21).fill({ x: 0, y: 0, z: 0 }),
+    'salom': [ // Waving pose (coordinates relative to wrist)
+        { x: 0, y: 0, z: 0 }, // 0
+        { x: 0.5, y: 0.2, z: 0 }, { x: 0.8, y: 0.5, z: 0 }, { x: 1.0, y: 0.8, z: 0 }, { x: 1.2, y: 1.1, z: 0 }, // Thumb
+        { x: 0.2, y: 1, z: 0 }, { x: 0.2, y: 1.5, z: 0 }, { x: 0.2, y: 1.9, z: 0 }, { x: 0.2, y: 2.2, z: 0 }, // Index
+        { x: 0, y: 1.1, z: 0 }, { x: 0, y: 1.6, z: 0 }, { x: 0, y: 2.1, z: 0 }, { x: 0, y: 2.5, z: 0 }, // Middle
+        { x: -0.2, y: 1, z: 0 }, { x: -0.2, y: 1.5, z: 0 }, { x: -0.2, y: 1.9, z: 0 }, { x: -0.2, y: 2.2, z: 0 }, // Ring
+        { x: -0.5, y: 0.8, z: 0 }, { x: -0.5, y: 1.2, z: 0 }, { x: -0.5, y: 1.5, z: 0 }, { x: -0.5, y: 1.8, z: 0 } // Pinky
+    ],
+    'rahmat': [ // Closed fist pose (clamped)
+        { x: 0, y: 0, z: 0 },
+        { x: 0.2, y: 0.1, z: 0 }, { x: 0.3, y: 0.2, z: 0 }, { x: 0.4, y: 0.3, z: 0 }, { x: 0.5, y: 0.4, z: 0 },
+        { x: 0.1, y: 0.2, z: 0 }, { x: 0.1, y: 0.3, z: 0 }, { x: 0.1, y: 0.4, z: 0 }, { x: 0.1, y: 0.5, z: 0 },
+        { x: 0, y: 0.2, z: 0 }, { x: 0, y: 0.3, z: 0 }, { x: 0, y: 0.4, z: 0 }, { x: 0, y: 0.5, z: 0 },
+        { x: -0.1, y: 0.2, z: 0 }, { x: -0.1, y: 0.3, z: 0 }, { x: -0.1, y: 0.4, z: 0 }, { x: -0.1, y: 0.5, z: 0 },
+        { x: -0.2, y: 0.1, z: 0 }, { x: -0.2, y: 0.2, z: 0 }, { x: -0.2, y: 0.3, z: 0 }, { x: -0.2, y: 0.4, z: 0 }
+    ],
+    'ha': [ // Index finger nodding pose
+        { x: 0, y: 0, z: 0 },
+        { x: 0.4, y: 0.1, z: 0 }, { x: 0.6, y: 0.2, z: 0 }, { x: 0.7, y: 0.3, z: 0 }, { x: 0.8, y: 0.4, z: 0 },
+        { x: 0.2, y: 1.5, z: 0.5 }, { x: 0.2, y: 2, z: 1 }, { x: 0.2, y: 2.5, z: 1.5 }, { x: 0.2, y: 3, z: 2 },
+        { x: 0, y: 0.5, z: 0 }, { x: 0, y: 0.8, z: 0 }, { x: 0, y: 1, z: 0 }, { x: 0, y: 1.2, z: 0 },
+        { x: -0.2, y: 0.5, z: 0 }, { x: -0.2, y: 0.8, z: 0 }, { x: -0.2, y: 1, z: 0 }, { x: -0.2, y: 1.2, z: 0 },
+        { x: -0.4, y: 0.4, z: 0 }, { x: -0.4, y: 0.7, z: 0 }, { x: -0.4, y: 0.9, z: 0 }, { x: -0.4, y: 1.1, z: 0 }
+    ],
+    'men': [ // Index finger pointing to self
+        { x: 0, y: 0, z: 0 },
+        { x: 0.3, y: 0.2, z: 0 }, { x: 0.5, y: 0.4, z: 0 }, { x: 0.6, y: 0.6, z: 0 }, { x: 0.7, y: 0.8, z: 0 },
+        { x: 0, y: 1, z: 1.5 }, { x: 0, y: 1.5, z: 2 }, { x: 0, y: 2, z: 2.5 }, { x: 0, y: 2.5, z: 3 },
+        { x: 0, y: 0.4, z: 0 }, { x: 0, y: 0.6, z: 0 }, { x: 0, y: 0.8, z: 0 }, { x: 0, y: 1, z: 0 },
+        { x: -0.2, y: 0.3, z: 0 }, { x: -0.2, y: 0.5, z: 0 }, { x: -0.2, y: 0.7, z: 0 }, { x: -0.2, y: 0.9, z: 0 },
+        { x: -0.4, y: 0.2, z: 0 }, { x: -0.4, y: 0.4, z: 0 }, { x: -0.4, y: 0.6, z: 0 }, { x: -0.4, y: 0.8, z: 0 }
+    ]
+};
 
 document.addEventListener('DOMContentLoaded', init3DHand);
 
@@ -535,25 +577,41 @@ function speakText(text) {
 // Ovozdan Imo-ishoraga aylantirish (Voice to 3D Sign)
 function update3DFromText(text) {
     const words = text.toLowerCase().split(' ');
-    // Simple pose mapping for common words
     words.forEach((word, index) => {
         setTimeout(() => {
-            if (word.includes('salom')) animatePose('wave');
-            else if (word.includes('rahmat')) animatePose('thank');
-            else if (word.includes('ha')) animatePose('yes');
-            else if (word.includes('yo\'q')) animatePose('no');
-        }, index * 1000);
+            if (word.includes('salom')) animate3DPose('salom');
+            else if (word.includes('rahmat')) animate3DPose('rahmat');
+            else if (word.includes('ha')) animate3DPose('ha');
+            else if (word.includes('men')) animate3DPose('men');
+        }, index * 1500);
     });
 }
 
-function animatePose(poseName) {
-    // Basic 3D animation logic
-    if (poseName === 'wave') {
+function animate3DPose(poseName) {
+    const pose = HAND_POSES[poseName];
+    if (!pose) return;
+
+    const startTime = Date.now();
+    const duration = 1000;
+
+    function lerpPose() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        // Use a sin ease for smoothness
+        const ease = Math.sin(progress * Math.PI / 2);
+
         joints.forEach((joint, i) => {
-            const angle = Math.sin(Date.now() * 0.01 + i) * 0.2;
-            joint.position.x += angle;
+            if (pose[i]) {
+                joint.position.x = THREE.MathUtils.lerp(joint.position.x, pose[i].x * 3, ease);
+                joint.position.y = THREE.MathUtils.lerp(joint.position.y, pose[i].y * 3, ease);
+                joint.position.z = THREE.MathUtils.lerp(joint.position.z, pose[i].z * 3, ease);
+            }
         });
+
+        if (progress < 1) requestAnimationFrame(lerpPose);
     }
+    lerpPose();
 }
 
 // Ovozli kirish (Speech-to-Text)
