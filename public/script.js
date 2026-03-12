@@ -781,6 +781,7 @@ function init3DHand() {
 
     // Kamerani boshlash
     async function startDeafCamera() {
+        if (isCameraRunning) return; // Double-click protection
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: {
@@ -793,23 +794,38 @@ function init3DHand() {
             deafVideo.srcObject = stream;
             await deafVideo.play();
 
-            deafVideo.addEventListener('loadeddata', () => {
-                deafCanvas.width = deafVideo.videoWidth;
-                deafCanvas.height = deafVideo.videoHeight;
+            // Wait for video metadata to load so canvas can be sized correctly
+            await new Promise((resolve) => {
+                if (deafVideo.readyState >= 2) {
+                    resolve();
+                } else {
+                    deafVideo.addEventListener('loadeddata', resolve, { once: true });
+                }
             });
+
+            deafCanvas.width = deafVideo.videoWidth || 640;
+            deafCanvas.height = deafVideo.videoHeight || 480;
+
+            isCameraRunning = true;
 
             const sendToMediaPipe = async () => {
                 if (!isCameraRunning) return;
-                await hands.send({ image: deafVideo });
+                if (deafVideo.readyState >= 2) {
+                    await hands.send({ image: deafVideo });
+                }
                 requestAnimationFrame(sendToMediaPipe);
             };
 
-            isCameraRunning = true;
             sendToMediaPipe();
+            showToast('Kamera muvaffaqiyatli ishga tushdi ✅', 'success');
 
         } catch (error) {
             console.error('Kamera xatosi:', error);
-            alert('Kamerani ishga tushirib bo\'lmadi');
+            if (error.name === 'NotAllowedError') {
+                showToast('Kameraga ruxsat berilmagan! Brauzer sozlamalarini tekshiring.', 'error');
+            } else {
+                showToast('Kamerani ishga tushirib boʻlmadi: ' + error.message, 'error');
+            }
         }
     }
 

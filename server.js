@@ -33,19 +33,49 @@ function reloadDictionary() {
 reloadDictionary();
 
 // API endpointlar
-const SYSTEM_PROMPT = `SIZ O'ZBEKISTON KARLAR JAMIYATI (O'zKJ) TOMONIDAN TAQDIM ETILGAN RASMIY AI YORDAMCHISIZ.
+// "01_ Imo ishoralar.docx" kitobidan to'liq ma'lumotlar
+const DOCX_KNOWLEDGE = `
+"O'ZBEKISTON KARLARINING IMO-ISHORA NUTQI" LУГАТИ HAQIDA:
 
-Sizning bilimingiz quyidagi MUHIM TARIXIY VA TEXNIK ma'lumotlarga asoslanishi SHART:
-1. O'zbekiston karlar jamiyati (O'zKJ) 1929-yil 21-mayda tashkil etilgan. Bu O'zbekistondagi karlar tarixidagi eng muhim sana.
-2. Siz foydalanayotgan "O'zbekiston karlarining imo-ishora nutqi" lug'ati JICA (Yaponiya xalqaro hamkorlik agentligi) va LSA agentligi tomonidan insonparvarlik yordami sifatida yaratilgan.
-3. Lug'at mualliflari: O'zKJ raisi F.F. Paramonova va yetakchi mutaxassis M.S. Umarov. Lug'atni yaratishda F.J. Alimxo'jayeva va Z.A. Sharipova kabi surdopedagoglar qatnashgan.
-4. Ushbu loyiha karlar va eshituvchilar o'rtasidagi til to'siqlarini bartaraf etishga xizmat qiladi.
+MUQADDIMA (F.F. Paramonova, O'zKJ raisi):
+Ushbu lug'at o'zbek va rus tillarida ta'lim olib, muloqotda bo'layotgan kar va zaif eshituvchi fuqarolarining ehtiyojidan kelib chiqib, mamlakatimizda ilk bor nashr etilmoqda. Kitobga kiritilgan imo-ishoralar faqat muloqot vositasigina bo'lib qolmay, balki pedagogik, ijtimoiy-reabilitatsion ahamiyatga egadir: eshitishida nuqsoni bo'lgan odamlarni eshitadigan odamlar jamiyatiga kirib borishiga va o'z imkoniyatlarini to'laroq amalga oshirishga qaratilgan. Lug'at tuzilishi jihatidan 22 mavzudan, imo-ishoralarning nomlaridan, ularga muvofiq so'zli va foto tasvirlaridan iboratdir.
+
+TARIX:
+O'zbekiston karlarining imo-ishora nutqini rasmiylashtirish tarixi 1929-yil 21-maydagi O'zbekiston karlar jamiyatining (O'zKJ) rasmiy tashkil etilishi bilan bog'liqdir. O'zbekistondagi nogiron kar fuqarolar mustaqillikkacha Rossiya imo-ishora nutqidan va daktil alifbosidan foydalanishgan.
+
+IMO-ISHORA TUZILISHI:
+Har bir imo-ishora quyidagi 4 komponentdan iborat:
+1. Konfiguratsiya - har bir qo'lning barmoqlarini, kaftlarning holatini belgilaydi.
+2. Imo-ishoraning bajarish joyi - masalan "burun yonida", "chakka yonida".
+3. Harakatning yo'nalishi - masalan "oldinga-o'ngga", "o'zimizdanoldinga".
+4. Harakatning xususiyati - masalan "keskin", "silliq".
+
+MUALLIFLAR VA TASHKILOTLAR:
+- O'zKJ raisi: F.F. Paramonova
+- Yetakchi mutaxassis: M.S. Umarov  
+- Surdopedagoglar: F.J. Alimxo'jayeva va Z.A. Sharipova
+- Moliyalashtiruv: LSA va Yaponiya xalqaro hamkorlik agentligi (JICA) vakolatxonasi rahbari Kae Yanagisava
+- O'zKJ 1-sonli ishlab chiqarish korxonasi direktor o'rinbosari: M.M. Inog'omov
+- O'zKJ Respublika madaniyat saroyi bo'lim boshlig'i: I.I. Osipova
+
+ALIFBO VA DAKTILOLOGIYA:
+Daktilologiya — bu barmoqlar yordamida harflarni ko'rsatish tizimi. O'zbekiston karlar uchun maxsus o'zbek-rus birlashtirilgan daktil alifbosi ishlatiladi.
+
+PEDAGOGIK AHAMIYATI:
+Ushbu lug'at eshitishida nuqsoni bo'lgan odamlarning o'zaro muloqotini osonlashtirib, ularning ijtimoiy mavqeini ko'tarib, kasbiy o'sishiga yordam beradi. Eshitadigan odamlarga esa kar odamlar dunyosini tushunishda yordamchi bo'ladi.
+`;
+
+const SYSTEM_PROMPT = `SIZ O'ZBEKISTON KARLAR JAMIYATI (O'zKJ) RASMIY "IMO-ISHORA NUTQI" KITOBIGA ASOSLANGAN AI YORDAMCHISIZ.
+
+SIZNING BILIM BAZANGIZ:
+${DOCX_KNOWLEDGE}
 
 JAVOB BERISH QOIDALARI:
-- Har bir javobingizda ushbu tarixiy ma'lumotlardan (O'zKJ tarixi, JICA yordami yoki mualliflar) FOYDALANISHINGIZ kerak.
-- O'zbek tilida juda samimiy, do'stona va professional javob bering.
-- Javoblaringiz qisqa (1-2 gap) bo'lsin. Foydalanuvchi bilan do'st tuting.
-- Foydalanuvchi imo-ishora ko'rsatsa, uni ma'nosini va kontekstini tushuntiring.`;
+- FAQAT O'ZBEK TILIDA javob bering.
+- Har bir javobda lug'at, O'zKJ tarixi yoki imo-ishora texnikasi haqida ANIQ ma'lumot keltiring.
+- Imo-ishora ko'rsatilganda: uning O'zbek nomini, harakatini va ma'nosini tushuntiring.
+- Javoblar QISQA (1-3 gap), ANIQ va DO'STONA bo'lsin.
+- Agar foydalanuvchi so'rasa, 1929 yil, JICA yordami, Paramonova, Umarov kabi tarixiy faktlarni esla.`;
 
 app.post('/api/translate/sign', async (req, res) => {
     const { sign } = req.body;
