@@ -480,58 +480,6 @@ function init3DHand() {
         updateAvatar(text);
     }
 
-    // Enhanced Speech Synthesis (Uzbek support or fallback)
-    let synth = window.speechSynthesis;
-    let voices = [];
-
-    function loadVoices() {
-        voices = synth.getVoices();
-        if (voices.length > 0) {
-            console.log("✅ Ovozlar yuklandi:", voices.filter(v => v.lang.includes('uz') || v.lang.includes('tr') || v.lang.includes('ru')).length, "ta mos ovoz");
-        }
-    }
-
-    // Robust voice loading loop
-    const voiceInterval = setInterval(() => {
-        loadVoices();
-        if (voices.length > 0) {
-            clearInterval(voiceInterval);
-            // Initial greeting once voices are ready
-            speakText('Imo-ishora AI tizimi tayyor');
-        }
-    }, 1000);
-
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-        speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    function speakText(text) {
-        if (!synth || !text) return;
-
-        // Cancel any ongoing speech
-        synth.cancel();
-
-        const utterance = new SpeechSynthesisUtterance(text);
-
-        // Uyg'unlashgan sozlamalar
-        utterance.rate = settings.speechRate || 1.0;
-        utterance.volume = settings.speechVolume || 1.0;
-
-        // Find best voice
-        if (voices.length === 0) voices = synth.getVoices();
-
-        // Priority: Uzbek -> Turkish -> Russian -> English
-        let selectedVoice = voices.find(v => v.lang.includes('uz')) ||
-            voices.find(v => v.lang.includes('tr')) ||
-            voices.find(v => v.lang.includes('ru')) ||
-            voices.find(v => v.default);
-
-        if (selectedVoice) utterance.voice = selectedVoice;
-        utterance.lang = selectedVoice ? selectedVoice.lang : 'uz-UZ';
-
-        synth.speak(utterance);
-        console.log("Speaking:", text);
-    }
 
     // O'zbekcha ovozli o'qish (Optimized TTS)
     function speakText(text) {
@@ -600,7 +548,6 @@ function init3DHand() {
     }
 
     // Ovozli rejimni yoqish (Speech to Text)
-    let recognition = null;
     function startSpeechRecognition() {
         if (!('webkitSpeechRecognition' in window)) {
             showToast("Browseringiz ovoz tanishni qo'llab-quvvatlamaydi.", "error");

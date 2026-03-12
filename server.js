@@ -11,6 +11,10 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Gemini AI Model initialization
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI');
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
 // Imo-ishora lug'atni yuklash
 let signDictionary = {};
 const dictionaryPath = path.join(__dirname, 'sign_dictionary.json');
