@@ -121,27 +121,24 @@ hands.onResults((results) => {
     activeCtx.save();
     activeCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
 
-    // Drawing the background video
-    if (settings.mirrorMode) {
-        activeCtx.translate(activeCanvas.width, 0);
-        activeCtx.scale(-1, 1);
-    }
-
+    // Drawing the background video (already mirrored by CSS if mirrorMode is on)
     activeCtx.globalAlpha = 1.0;
     activeCtx.drawImage(results.image, 0, 0, activeCanvas.width, activeCanvas.height);
 
     if (results.multiHandLandmarks) {
-        // Reset transform for drawing markers if we want them aligned with the CSS flip
-        // Actually, if context is flipped, markers will be flipped too. 
-        // We want markers to stay on hands.
-
         for (const landmarks of results.multiHandLandmarks) {
+            // Update 3D hand model regardless of showSkeleton setting
+            update3DHand(landmarks);
+
+            // Only draw 2D skeleton if showSkeleton is enabled
             if (settings.showSkeleton) {
                 // Professional Hand Image Overlay instead of skeleton
-                drawHandImage(activeCtx, landmarks);
-            }
+                // drawHandImage(activeCtx, landmarks); // This function is now primarily for 3D update
 
-            // Subtle joint points for tracking feedback
+                // Draw MediaPipe's default skeleton for 2D visualization
+                drawConnectors(activeCtx, landmarks, Hands.HAND_CONNECTIONS, { color: '#00d2ff', lineWidth: 2 });
+                drawLandmarks(activeCtx, landmarks, { color: '#ffffff', lineWidth: 1, radius: 2 });
+            }
             drawLandmarks(activeCtx, landmarks, {
                 color: '#00d2ff',
                 fillColor: '#ffffff',
@@ -156,50 +153,114 @@ hands.onResults((results) => {
     activeCtx.restore();
 });
 
-// New function to draw hand image over joints with proper rotation
-function drawHandImage(ctx, landmarks) {
-    try {
-        const handImg = document.querySelector('#rightHand img') || document.querySelector('#leftHand img');
-        if (!handImg || !handImg.complete) return;
+// --- Three.js 3D Hand Setup ---
+let scene, camera, renderer, handMesh;
+let joints = [];
 
-        // Use palm center and wrist to scale/rotate
-        const wrist = landmarks[0];
-        const middleMCP = landmarks[9];
-        const indexMCP = landmarks[5];
-        const pinkyMCP = landmarks[17];
+function init3DHand() {
+    const container = document.getElementById('hand3DContainer');
+    if (!container) return;
 
-        if (!wrist || !middleMCP || !indexMCP || !pinkyMCP) return;
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
 
-        // Average center of palm
-        const centerX = ((wrist.x + middleMCP.x) / 2) * ctx.canvas.width;
-        const centerY = ((wrist.y + middleMCP.y) / 2) * ctx.canvas.height;
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0x00d2ff, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
 
-        // Calculate rotation angle (from wrist to middle finger MCP)
-        const angle = Math.atan2(
-            (middleMCP.y - wrist.y) * ctx.canvas.height,
-            (middleMCP.x - wrist.x) * ctx.canvas.width
-        ) + Math.PI / 2; // Offset for image orientation
+    // Create Hand Model (Simplified for now with spheres and cylinders)
+    const handGroup = new THREE.Group();
+    const material = new THREE.MeshPhongMaterial({
+        color: 0x00d2ff,
+        transparent: true,
+        opacity: 0.8,
+        emissive: 0x00d2ff,
+        emissiveIntensity: 0.2
+    });
 
-        // Calculate scale based on palm width (Index MCP to Pinky MCP)
-        const dx = (indexMCP.x - pinkyMCP.x) * ctx.canvas.width;
-        const dy = (indexMCP.y - pinkyMCP.y) * ctx.canvas.height;
-        const width = Math.sqrt(dx * dx + dy * dy);
-        const size = width * 3.2; // Slightly reduced for better fit
-
-        ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(angle);
-
-        // Draw semi-transparent professional hand highlight
-        ctx.globalAlpha = 0.65;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#00d2ff";
-
-        ctx.drawImage(handImg, -size / 2, -size / 2, size, size);
-        ctx.restore();
-    } catch (e) {
-        console.warn("Hand drawing error:", e);
+    // Create 21 joints
+    for (let i = 0; i < 21; i++) {
+        const geo = new THREE.SphereGeometry(0.12, 16, 16);
+        const mesh = new THREE.Mesh(geo, material);
+        joints.push(mesh);
+        handGroup.add(mesh);
     }
+
+    // Connect joints with cylinders
+    const boneMaterial = new THREE.MeshPhongMaterial({ color: 0x00d2ff, transparent: true, opacity: 0.4 });
+    const connections = [
+        [0, 1], [1, 2], [2, 3], [3, 4], // Thumb
+        [0, 5], [5, 6], [6, 7], [7, 8], // Index
+        [0, 9], [9, 10], [10, 11], [11, 12], // Middle
+        [0, 13], [13, 14], [14, 15], [15, 16], // Ring
+        [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
+        [5, 9], [9, 13], [13, 17], [0, 17], [0, 5] // Palm
+    ];
+
+    connections.forEach(conn => {
+        const geometry = new THREE.CylinderGeometry(0.05, 0.05, 1);
+        const cylinder = new THREE.Mesh(geometry, boneMaterial);
+        cylinder.userData = { from: conn[0], to: conn[1] };
+        handGroup.add(cylinder);
+    });
+
+    scene.add(handGroup);
+    camera.position.z = 8;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+}
+
+function update3DHand(landmarks) {
+    if (!joints.length || !landmarks) return;
+
+    // Center the hand in the 3D scene
+    const wrist = landmarks[0];
+
+    landmarks.forEach((lm, i) => {
+        // Fix Mirroring: If camera is mirrored (scaleX -1), flip the X coordinate
+        // MediaPipe landmarks are 0..1 from top-left of the RAW frame.
+        const mirroredX = 1 - lm.x;
+        joints[i].position.x = (mirroredX - 0.5) * 10;
+        joints[i].position.y = -(lm.y - 0.5) * 10;
+        joints[i].position.z = -lm.z * 10;
+    });
+
+    // Update cylinders
+    scene.children[2].children.forEach(child => {
+        if (child.userData.from !== undefined) {
+            const p1 = joints[child.userData.from].position;
+            const p2 = joints[child.userData.to].position;
+            const dist = p1.distanceTo(p2);
+            child.position.copy(p1).lerp(p2, 0.5);
+            child.scale.set(1, dist, 1);
+            child.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', init3DHand);
+
+// Update performDetection to include 3D updates
+const originalDrawHandImage = drawHandImage;
+function drawHandImage(ctx, landmarks) {
+    update3DHand(landmarks);
+    // Keep 2D skeleton for debug/overlay if needed, but 3D is primary
 }
 
 let lastSign = '';
@@ -267,11 +328,16 @@ async function detectSign(multiHandLandmarks) {
         if (progressText) progressText.textContent = Math.round(percent) + '%';
 
         if (signCount >= PROGRESS_LIMIT) {
-            const sign = signDictionary[matchedSign];
-            if (sign) {
+            console.log("Triggering detection for:", matchedSign);
+            const signData = signDictionary[matchedSign];
+            if (signData) {
                 playSuccessSound();
-                displayDetectedSign(matchedSign, sign);
-                showToast(`Aniqlangan belgi: ${sign.original}`, 'success');
+                displayDetectedSign(matchedSign, signData);
+                showToast(`Aniqlangan belgi: ${signData.original}`, 'success');
+
+                // Visual feedback on 3D hand
+                highlight3DHand('#00ff00');
+
                 signCount = 0;
                 lastSign = '';
                 if (progressEl) progressEl.style.display = 'none';
@@ -283,11 +349,18 @@ async function detectSign(multiHandLandmarks) {
     }
 }
 
+function highlight3DHand(color) {
+    joints.forEach(j => j.material.color.set(color));
+    setTimeout(() => joints.forEach(j => j.material.color.set('#00d2ff')), 1000);
+}
+
 function displayDetectedSign(signKey, signData) {
     const translationEl = document.getElementById('deafTranslation');
     const descriptionEl = document.getElementById('deafDescription');
 
-    if (translationEl.textContent === signData.original) return;
+    // If same as before, only repeat if it was long ago or if triggered again
+    // To fix "stuck at 100%" feel, we allow repeat every time it hits 100%
+    // but we can skip AI call if it's the exact same message to save tokens
 
     translationEl.textContent = signData.original;
     descriptionEl.textContent = signData.description;
@@ -305,13 +378,12 @@ function displayDetectedSign(signKey, signData) {
 // AI javob olish (Routing through Backend to fix "Analyzing" hang)
 async function getAIResponse(signName) {
     try {
-        const loadingEl = document.getElementById('deafLoading');
+        const thinkingEl = document.getElementById('aiThinking');
         const aiTextEl = document.getElementById('aiResponseText');
-        const avatarEl = document.getElementById('aiAvatar');
 
-        loadingEl.style.display = 'inline-block';
-        aiTextEl.textContent = 'Tahlil qilinmoqda...';
-        avatarEl.classList.add('thinking');
+        if (thinkingEl) thinkingEl.style.display = 'flex';
+        aiTextEl.textContent = 'AI tahlil qilmoqda...';
+        aiTextEl.style.opacity = '0.5';
 
         const response = await fetch(`${API_URL}/api/translate/sign`, {
             method: 'POST',
@@ -322,7 +394,9 @@ async function getAIResponse(signName) {
         const data = await response.json();
         if (data.success) {
             aiTextEl.textContent = data.aiResponse;
-            updateAvatar(data.aiResponse);
+            aiTextEl.style.opacity = '1';
+            speakText(data.aiResponse); // Read out in Uzbek
+            update3DFromText(data.aiResponse); // Show in 3D
             textToSigns(data.aiResponse);
             addToHistory('ai', data.aiResponse);
         }
@@ -331,8 +405,9 @@ async function getAIResponse(signName) {
         document.getElementById('aiResponseText').textContent = 'Bog\'lanishda xatolik.';
         showToast('AI bilan bog\'lanishda xatolik yuz berdi.', 'error');
     } finally {
-        document.getElementById('deafLoading').style.display = 'none';
-        document.getElementById('aiAvatar').classList.remove('thinking');
+        const thinkingEl = document.getElementById('aiThinking');
+        if (thinkingEl) thinkingEl.style.display = 'none';
+        document.getElementById('aiResponseText').style.opacity = '1';
     }
 }
 
@@ -439,6 +514,46 @@ function speakText(text) {
 
     synth.speak(utterance);
     console.log("Speaking:", text);
+}
+
+// O'zbekcha ovozli o'qish (TTS)
+function speakText(text) {
+    if (!window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+
+    // Uzbek voice lookup (fallback to similar sounding if missing)
+    const voices = window.speechSynthesis.getVoices();
+    let uzVoice = voices.find(v => v.lang.startsWith('uz') || v.name.includes('Uzbek'));
+    if (!uzVoice) uzVoice = voices.find(v => v.lang.startsWith('tr') || v.name.includes('Turkish')); // Fallback to Turkish if Uzbek is unavailable
+
+    if (uzVoice) utterance.voice = uzVoice;
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+}
+
+// Ovozdan Imo-ishoraga aylantirish (Voice to 3D Sign)
+function update3DFromText(text) {
+    const words = text.toLowerCase().split(' ');
+    // Simple pose mapping for common words
+    words.forEach((word, index) => {
+        setTimeout(() => {
+            if (word.includes('salom')) animatePose('wave');
+            else if (word.includes('rahmat')) animatePose('thank');
+            else if (word.includes('ha')) animatePose('yes');
+            else if (word.includes('yo\'q')) animatePose('no');
+        }, index * 1000);
+    });
+}
+
+function animatePose(poseName) {
+    // Basic 3D animation logic
+    if (poseName === 'wave') {
+        joints.forEach((joint, i) => {
+            const angle = Math.sin(Date.now() * 0.01 + i) * 0.2;
+            joint.position.x += angle;
+        });
+    }
 }
 
 // Ovozli kirish (Speech-to-Text)
@@ -817,3 +932,46 @@ const HAND_CONNECTIONS = [
 
 // Boshlang'ich xabar
 speakText('Imo-ishora AI tizimi ishga tushdi');
+
+// Toast Notifications System
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100px)';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Success Sound Effect (Synth)
+function playSuccessSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch (e) {
+        console.warn("Sound blocked by browser policy");
+    }
+}

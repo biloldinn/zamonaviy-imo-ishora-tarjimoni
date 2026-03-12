@@ -33,6 +33,20 @@ function reloadDictionary() {
 reloadDictionary();
 
 // API endpointlar
+const SYSTEM_PROMPT = `Siz O'zbekiston karlar jamiyati (O'zKJ) tomonidan qo'llab-quvvatlanadigan "Zamonaviy Imo-ishora Tarjimoni" uchun maxsus AI yordamchisiz.
+
+TARIXIY VA TEXNIK KONTEKST:
+1. O'zKJ 1929-yil 21-mayda tashkil etilgan.
+2. "O'zbekiston karlarining imo-ishora nutqi" lug'ati Yaponiya xalqaro hamkorlik agentligi (JICA/LSA) yordami bilan yaratilgan.
+3. Mualliflar: F.F. Paramonova (O'zKJ raisi), M.S. Umarov va boshqa mutaxassislar.
+4. Ushbu loyiha O'zbekiston karlarining ijtimoiy-reabilitatsion ahamiyatini oshirishga qaratilgan.
+
+SIZNING VAZIFANGIZ:
+- Foydalanuvchi ko'rsatgan imo-ishoralarni o'zbek tilida samimiy va do'stona tarzda izohlang.
+- Savollarga O'zbekiston karlar madaniyati va imo-ishora qoidalari asosida javob bering.
+- Javoblaringiz qisqa (1-2 gap), tushunarli va professional bo'lsin.
+- Stiker yoki keraksiz emojilardan foydalanmang.`;
+
 app.post('/api/translate/sign', async (req, res) => {
     const { sign } = req.body;
     const lookupSign = sign.toLowerCase().trim();
@@ -40,10 +54,12 @@ app.post('/api/translate/sign', async (req, res) => {
 
     if (signData) {
         try {
-            const prompt = `Siz Imo-ishora AI yordamchisiz. Foydalanuvchi "${signData.original}" belgisini ko'rsatdi.
-            Ushbu belgining tavsifi: "${signData.description}".
-            Faqat ushbu ma'lumotga asoslanib, o'zbek tilida juda samimiy va qisqa (1 ta gap) javob bering.
-            Stiker yoki emojilardan foydalanmang. Do'stona munosabat bildiring.`;
+            const prompt = `${SYSTEM_PROMPT}
+            
+            FOYDALANUVCHI HARAKATI: Foydalanuvchi "${signData.original}" imo-ishorasini ko'rsatdi.
+            TAVSIF: "${signData.description}".
+            
+            Ushbu belgining ma'nosini samimiy tarzda tasdiqlang va foydalanuvchiga qisqa (1 gap) munosabat bildiring.`;
 
             const result = await model.generateContent(prompt);
             const textResponse = result.response.text();
@@ -67,8 +83,11 @@ app.post('/api/translate/sign', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
     const { message } = req.body;
     try {
-        const prompt = `Siz Imo-ishora AI yordamchisiz. Foydalanuvchi aytdi: "${message}". 
-        Unga o'zbek tilida qisqa va do'stona javob bering.`;
+        const prompt = `${SYSTEM_PROMPT}
+        
+        FOYDALANUVCHI SAVOLI: "${message}"
+        
+        Unga o'zbek tilida qisqa, aqlli va do'stona javob bering.`;
         const result = await model.generateContent(prompt);
         res.json({ success: true, aiResponse: result.response.text() });
     } catch (error) {
