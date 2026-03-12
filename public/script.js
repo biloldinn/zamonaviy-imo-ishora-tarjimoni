@@ -619,9 +619,7 @@ function startSpeechRecognition() {
     }
 
     if (recognition) {
-        recognition.stop();
-        isListening = false;
-        updateVoiceUI(false);
+        stopVoiceRecognition();
         return;
     }
 
@@ -645,394 +643,450 @@ function startSpeechRecognition() {
         }
 
         if (finalTranscript) {
-        };
-    }
+            console.log("Eshitildi:", finalTranscript);
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) chatInput.value = finalTranscript;
 
-    // Ovozli kirishni boshlash
-    function startSpeechRecognition() {
-        if (recognition) {
-            recognition.start();
-            isListening = true;
-            document.getElementById('speechLoading').style.display = 'inline-block';
+            // Handle as chat submit
+            const chatText = finalTranscript.trim();
+            if (chatText) {
+                getAIChatResponse(chatText);
+                update3DFromText(chatText);
+            }
         }
-    }
+    };
 
-    function stopSpeechRecognition() {
-        if (recognition) {
-            recognition.stop();
-            isListening = false;
-            document.getElementById('speechLoading').style.display = 'none';
+    recognition.onerror = (event) => {
+        console.error("STT Error:", event.error);
+        if (event.error === 'not-allowed') {
+            showToast("Mikrofonga ruxsat berilmagan.", "error");
         }
+        stopVoiceRecognition();
+    };
+
+    recognition.onend = () => {
+        if (isListening && recognition) {
+            try { recognition.start(); } catch (e) { }
+        }
+    };
+
+    recognition.start();
+}
+
+function stopVoiceRecognition() {
+    if (recognition) {
+        recognition.onend = null;
+        recognition.stop();
+        recognition = null;
     }
+    isListening = false;
+    updateVoiceUI(false);
+}
 
-    // Matnni imo-ishoraga aylantirish
-    function processSpeechToSign(text) {
-        const words = text.toLowerCase().split(/\s+/);
-        let signsHtml = '';
-        let translationText = '';
+function updateVoiceUI(active) {
+    const btn = document.getElementById('voiceControlBtn');
+    if (!btn) return;
 
-        words.forEach(word => {
-            const cleanWord = word.replace(/[.,!?]/g, '');
+    if (active) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fas fa-microphone"></i> To\'xtatish';
+        btn.style.background = 'var(--accent)';
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fas fa-microphone-alt"></i> Ovozli Rejim';
+        btn.style.background = '';
+    }
+}
 
-            if (signDictionary[cleanWord]) {
-                signsHtml += `
+// AI Chat Javobi (Voice/Text Chat Mode)
+async function getAIChatResponse(message) {
+    const aiTextEl = document.getElementById('aiResponseText');
+    try {
+        const response = await fetch(`${API_URL}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        });
+        const data = await response.json();
+        if (data.success) {
+            aiTextEl.textContent = data.aiResponse;
+            speakText(data.aiResponse);
+            addToHistory('user', message);
+            addToHistory('ai', data.aiResponse);
+        }
+    } catch (error) {
+        console.error("Chat error:", error);
+    }
+}
+
+// Matnni imo-ishoraga aylantirish
+function processSpeechToSign(text) {
+    const words = text.toLowerCase().split(/\s+/);
+    let signsHtml = '';
+    let translationText = '';
+
+    words.forEach(word => {
+        const cleanWord = word.replace(/[.,!?]/g, '');
+
+        if (signDictionary[cleanWord]) {
+            signsHtml += `
                 <div class="sign-item">
                     <span class="sign-label">${cleanWord.toUpperCase()}</span>
                 </div>
             `;
-                translationText += signDictionary[cleanWord].original + ' ';
-            } else {
-                // Find synonyms or partial matches
-                signsHtml += `
+            translationText += signDictionary[cleanWord].original + ' ';
+        } else {
+            // Find synonyms or partial matches
+            signsHtml += `
                 <div class="sign-item unrecognized">
                     <span class="sign-label">${cleanWord.toUpperCase()}</span>
                 </div>
             `;
-            }
-        });
-
-        document.getElementById('signOutput').innerHTML = signsHtml;
-        document.getElementById('signTranslation').textContent = translationText || text;
-
-        // Avatarni yangilash
-        updateSignAvatar(text);
-
-        // Tarixga qo'shish
-        addToHistory('matn', text);
-    }
-
-    function updateSignAvatar(text) {
-        const leftHand = document.getElementById('signLeftHand');
-        const rightHand = document.getElementById('signRightHand');
-        const lowerText = text.toLowerCase();
-
-        leftHand.classList.remove('active');
-        rightHand.classList.remove('active');
-
-        if (lowerText.includes('salom')) {
-            leftHand.classList.add('active');
-            rightHand.classList.add('active');
-        } else if (lowerText.includes('xayr')) {
-            rightHand.classList.add('active');
-        } else {
-            leftHand.classList.add('active');
         }
-    }
+    });
+
+    document.getElementById('signOutput').innerHTML = signsHtml;
+    document.getElementById('signTranslation').textContent = translationText || text;
+
+    // Avatarni yangilash
+    updateSignAvatar(text);
 
     // Tarixga qo'shish
-    // Tarixni saqlash va ko'rsatish
-    function addToHistory(type, text) {
-        if (!settings.keepHistory) return;
+    addToHistory('matn', text);
+}
 
-        const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-        const item = { type, text, time };
+function updateSignAvatar(text) {
+    const leftHand = document.getElementById('signLeftHand');
+    const rightHand = document.getElementById('signRightHand');
+    const lowerText = text.toLowerCase();
 
-        historyList.unshift(item);
-        if (historyList.length > 20) historyList.pop();
+    leftHand.classList.remove('active');
+    rightHand.classList.remove('active');
 
-        storage.set('translationHistory', historyList);
-        renderHistory();
+    if (lowerText.includes('salom')) {
+        leftHand.classList.add('active');
+        rightHand.classList.add('active');
+    } else if (lowerText.includes('xayr')) {
+        rightHand.classList.add('active');
+    } else {
+        leftHand.classList.add('active');
     }
+}
 
-    function renderHistory() {
-        const list = document.getElementById('historyList');
-        if (!list) return;
-        list.innerHTML = '';
+// Tarixga qo'shish
+// Tarixni saqlash va ko'rsatish
+function addToHistory(type, text) {
+    if (!settings.keepHistory) return;
 
-        historyList.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'history-item';
+    const time = new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+    const item = { type, text, time };
 
-            const icon = item.type === 'imo-ishora' ? '👤' : item.type === 'ai' ? '🤖' : '🗣️';
-            const typeText = item.type === 'imo-ishora' ? 'Imo-ishora → Matn' :
-                item.type === 'ai' ? 'AI javob' : 'Matn → Imo-ishora';
+    historyList.unshift(item);
+    if (historyList.length > 20) historyList.pop();
 
-            div.innerHTML = `
+    storage.set('translationHistory', historyList);
+    renderHistory();
+}
+
+function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!list) return;
+    list.innerHTML = '';
+
+    historyList.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+
+        const icon = item.type === 'imo-ishora' ? '👤' : item.type === 'ai' ? '🤖' : '🗣️';
+        const typeText = item.type === 'imo-ishora' ? 'Imo-ishora → Matn' :
+            item.type === 'ai' ? 'AI javob' : 'Matn → Imo-ishora';
+
+        div.innerHTML = `
             <div class="history-icon">${icon}</div>
             <div class="history-text">
                 <div><strong>${typeText}:</strong> ${item.text.substring(0, 50)}${item.text.length > 50 ? '...' : ''}</div>
                 <div class="history-time">${item.time}</div>
             </div>
         `;
-            list.appendChild(div);
-        });
-    }
+        list.appendChild(div);
+    });
+}
 
-    // Kamerani boshlash
-    async function startDeafCamera() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user'
-                }
-            });
-
-            deafVideo.srcObject = stream;
-            await deafVideo.play();
-
-            deafVideo.addEventListener('loadeddata', () => {
-                deafCanvas.width = deafVideo.videoWidth;
-                deafCanvas.height = deafVideo.videoHeight;
-            });
-
-            const sendToMediaPipe = async () => {
-                if (!isCameraRunning) return;
-                await hands.send({ image: deafVideo });
-                requestAnimationFrame(sendToMediaPipe);
-            };
-
-            isCameraRunning = true;
-            sendToMediaPipe();
-
-        } catch (error) {
-            console.error('Kamera xatosi:', error);
-            alert('Kamerani ishga tushirib bo\'lmadi');
-        }
-    }
-
-    function stopDeafCamera() {
-        isCameraRunning = false;
-        const stream = deafVideo.srcObject;
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-            deafVideo.srcObject = null;
-        }
-        deafCtx.clearRect(0, 0, deafCanvas.width, deafCanvas.height);
-    }
-
-    // Rejim almashtirish (Navigation)
-    document.querySelectorAll('[data-nav]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-
-            document.querySelectorAll('[data-nav]').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-
-            const nav = link.dataset.nav;
-
-            // Hide all sections
-            const hero = document.querySelector('.hero');
-            const translateMode = document.getElementById('deafMode');
-            const hearingMode = document.getElementById('hearingMode');
-            const librarySection = document.getElementById('librarySection');
-            const quizSection = document.getElementById('quizSection');
-            const historySection = document.getElementById('historySection');
-
-            [hero, translateMode, hearingMode, librarySection, quizSection, historySection].forEach(s => {
-                if (s) s.style.display = 'none';
-            });
-
-            stopDeafCamera();
-            stopQuizCamera();
-            stopSpeechRecognition();
-
-            if (nav === 'translate') {
-                hero.style.display = 'block';
-                translateMode.style.display = 'grid';
-                historySection.style.display = 'block';
-            } else if (nav === 'library') {
-                librarySection.style.display = 'block';
-            } else if (nav === 'quiz') {
-                quizSection.style.display = 'block';
+// Kamerani boshlash
+async function startDeafCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user'
             }
         });
+
+        deafVideo.srcObject = stream;
+        await deafVideo.play();
+
+        deafVideo.addEventListener('loadeddata', () => {
+            deafCanvas.width = deafVideo.videoWidth;
+            deafCanvas.height = deafVideo.videoHeight;
+        });
+
+        const sendToMediaPipe = async () => {
+            if (!isCameraRunning) return;
+            await hands.send({ image: deafVideo });
+            requestAnimationFrame(sendToMediaPipe);
+        };
+
+        isCameraRunning = true;
+        sendToMediaPipe();
+
+    } catch (error) {
+        console.error('Kamera xatosi:', error);
+        alert('Kamerani ishga tushirib bo\'lmadi');
+    }
+}
+
+function stopDeafCamera() {
+    isCameraRunning = false;
+    const stream = deafVideo.srcObject;
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        deafVideo.srcObject = null;
+    }
+    deafCtx.clearRect(0, 0, deafCanvas.width, deafCanvas.height);
+}
+
+// Rejim almashtirish (Navigation)
+document.querySelectorAll('[data-nav]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        document.querySelectorAll('[data-nav]').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        const nav = link.dataset.nav;
+
+        // Hide all sections
+        const hero = document.querySelector('.hero');
+        const translateMode = document.getElementById('deafMode');
+        const hearingMode = document.getElementById('hearingMode');
+        const librarySection = document.getElementById('librarySection');
+        const quizSection = document.getElementById('quizSection');
+        const historySection = document.getElementById('historySection');
+
+        [hero, translateMode, hearingMode, librarySection, quizSection, historySection].forEach(s => {
+            if (s) s.style.display = 'none';
+        });
+
+        stopDeafCamera();
+        stopQuizCamera();
+        stopSpeechRecognition();
+
+        if (nav === 'translate') {
+            hero.style.display = 'block';
+            translateMode.style.display = 'grid';
+            historySection.style.display = 'block';
+        } else if (nav === 'library') {
+            librarySection.style.display = 'block';
+        } else if (nav === 'quiz') {
+            quizSection.style.display = 'block';
+        }
     });
+});
 
-    // Library Logic
-    function displayLibrary(filter = '') {
-        const list = document.getElementById('libraryList');
-        if (!list) return;
+// Library Logic
+function displayLibrary(filter = '') {
+    const list = document.getElementById('libraryList');
+    if (!list) return;
 
-        list.innerHTML = '';
-        const entries = Object.entries(signDictionary);
+    list.innerHTML = '';
+    const entries = Object.entries(signDictionary);
 
-        entries.forEach(([key, data]) => {
-            if (key.includes(filter.toLowerCase())) {
-                const item = document.createElement('div');
-                item.className = 'card';
-                item.style.padding = '1.5rem';
-                item.style.textAlign = 'center';
-                item.innerHTML = `
+    entries.forEach(([key, data]) => {
+        if (key.includes(filter.toLowerCase())) {
+            const item = document.createElement('div');
+            item.className = 'card';
+            item.style.padding = '1.5rem';
+            item.style.textAlign = 'center';
+            item.innerHTML = `
                 <div class="sign-label" style="margin-bottom: 0.5rem;">${key.toUpperCase()}</div>
                 <div style="font-size: 0.8rem; color: #aaa;">${data.original}</div>
                 <button class="btn btn-outline" style="margin-top: 1rem; width: 100%; font-size: 0.8rem;" onclick="speakText('${data.original}')">🔊 Eshitish</button>
             `;
-                list.appendChild(item);
-            }
-        });
-    }
-
-    document.getElementById('librarySearch').addEventListener('input', (e) => {
-        displayLibrary(e.target.value);
-    });
-
-    // Quiz Logic
-    let currentQuizTarget = '';
-    let quizScore = 0;
-    let isQuizRunning = false;
-    const quizVideo = document.getElementById('quizVideo');
-    const quizCanvas = document.getElementById('quizCanvas');
-    const quizCtx = quizCanvas.getContext('2d');
-
-    async function startQuiz() {
-        const signs = Object.keys(signDictionary);
-        if (signs.length === 0) return;
-
-        currentQuizTarget = signs[Math.floor(Math.random() * signs.length)];
-        document.getElementById('targetSign').textContent = currentQuizTarget.toUpperCase();
-        document.getElementById('quizStatus').textContent = 'Belgini ko\'rsating...';
-        document.getElementById('skipQuiz').style.display = 'inline-block';
-        document.getElementById('startQuiz').style.display = 'none';
-
-        if (!isQuizRunning) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                quizVideo.srcObject = stream;
-                await quizVideo.play();
-
-                quizCanvas.width = quizVideo.videoWidth;
-                quizCanvas.height = quizVideo.videoHeight;
-
-                isQuizRunning = true;
-                runQuizDetection();
-            } catch (err) {
-                console.error(err);
-            }
-        }
-    }
-
-    async function runQuizDetection() {
-        if (!isQuizRunning) return;
-        await hands.send({ image: quizVideo });
-        requestAnimationFrame(runQuizDetection);
-    }
-
-    document.getElementById('skipQuiz').addEventListener('click', startQuiz);
-
-    // Update performDetection to handle Quiz
-    const originalDetectSign = detectSign;
-    detectSign = async function (multiHandLandmarks) {
-        await originalDetectSign(multiHandLandmarks);
-
-        if (isQuizRunning && lastSign === currentQuizTarget && signCount >= 10) {
-            quizScore++;
-            document.getElementById('quizScore').textContent = quizScore;
-            document.getElementById('quizStatus').textContent = 'To\'g\'ri! Keyingi belgi...';
-
-            // Next question
-            setTimeout(startQuiz, 2000);
-            signCount = 0;
-        }
-    };
-
-    function stopQuizCamera() {
-        isQuizRunning = false;
-        if (quizVideo.srcObject) {
-            quizVideo.srcObject.getTracks().forEach(t => t.stop());
-            quizVideo.srcObject = null;
-        }
-    }
-
-    document.getElementById('startQuiz').addEventListener('click', startQuiz);
-
-    // Tugmalar
-    document.getElementById('startDeafCamera').addEventListener('click', startDeafCamera);
-    document.getElementById('stopDeafCamera').addEventListener('click', stopDeafCamera);
-
-    document.getElementById('startListening').addEventListener('click', startSpeechRecognition);
-    document.getElementById('stopListening').addEventListener('click', stopSpeechRecognition);
-
-    document.getElementById('speakTranslation').addEventListener('click', () => {
-        const text = document.getElementById('deafTranslation').textContent;
-        if (text && text !== '...') {
-            speakText(text);
+            list.appendChild(item);
         }
     });
+}
 
-    function drawConnectors(ctx, landmarks, connections, options) {
-        if (!landmarks || !connections) return;
-        const width = ctx.canvas.width;
-        const height = ctx.canvas.height;
-        for (const connection of connections) {
-            const from = landmarks[connection[0]];
-            const to = landmarks[connection[1]];
-            if (from && to) {
-                ctx.beginPath();
-                ctx.moveTo(from.x * width, from.y * height);
-                ctx.lineTo(to.x * width, to.y * height);
-                ctx.strokeStyle = options.color || '#00FF00';
-                ctx.lineWidth = options.lineWidth || 2;
-                ctx.lineCap = 'round';
-                ctx.stroke();
-            }
+document.getElementById('librarySearch').addEventListener('input', (e) => {
+    displayLibrary(e.target.value);
+});
+
+// Quiz Logic
+let currentQuizTarget = '';
+let quizScore = 0;
+let isQuizRunning = false;
+const quizVideo = document.getElementById('quizVideo');
+const quizCanvas = document.getElementById('quizCanvas');
+const quizCtx = quizCanvas.getContext('2d');
+
+async function startQuiz() {
+    const signs = Object.keys(signDictionary);
+    if (signs.length === 0) return;
+
+    currentQuizTarget = signs[Math.floor(Math.random() * signs.length)];
+    document.getElementById('targetSign').textContent = currentQuizTarget.toUpperCase();
+    document.getElementById('quizStatus').textContent = 'Belgini ko\'rsating...';
+    document.getElementById('skipQuiz').style.display = 'inline-block';
+    document.getElementById('startQuiz').style.display = 'none';
+
+    if (!isQuizRunning) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            quizVideo.srcObject = stream;
+            await quizVideo.play();
+
+            quizCanvas.width = quizVideo.videoWidth;
+            quizCanvas.height = quizVideo.videoHeight;
+
+            isQuizRunning = true;
+            runQuizDetection();
+        } catch (err) {
+            console.error(err);
         }
     }
+}
 
-    function drawLandmarks(ctx, landmarks, options) {
-        if (!landmarks) return;
-        const width = ctx.canvas.width;
-        const height = ctx.canvas.height;
-        for (const landmark of landmarks) {
+async function runQuizDetection() {
+    if (!isQuizRunning) return;
+    await hands.send({ image: quizVideo });
+    requestAnimationFrame(runQuizDetection);
+}
+
+document.getElementById('skipQuiz').addEventListener('click', startQuiz);
+
+// Update performDetection to handle Quiz
+const originalDetectSign = detectSign;
+detectSign = async function (multiHandLandmarks) {
+    await originalDetectSign(multiHandLandmarks);
+
+    if (isQuizRunning && lastSign === currentQuizTarget && signCount >= 10) {
+        quizScore++;
+        document.getElementById('quizScore').textContent = quizScore;
+        document.getElementById('quizStatus').textContent = 'To\'g\'ri! Keyingi belgi...';
+
+        // Next question
+        setTimeout(startQuiz, 2000);
+        signCount = 0;
+    }
+};
+
+function stopQuizCamera() {
+    isQuizRunning = false;
+    if (quizVideo.srcObject) {
+        quizVideo.srcObject.getTracks().forEach(t => t.stop());
+        quizVideo.srcObject = null;
+    }
+}
+
+document.getElementById('startQuiz').addEventListener('click', startQuiz);
+
+// Tugmalar
+document.getElementById('startDeafCamera').addEventListener('click', startDeafCamera);
+document.getElementById('stopDeafCamera').addEventListener('click', stopDeafCamera);
+
+document.getElementById('startListening').addEventListener('click', startSpeechRecognition);
+document.getElementById('stopListening').addEventListener('click', stopSpeechRecognition);
+
+document.getElementById('speakTranslation').addEventListener('click', () => {
+    const text = document.getElementById('deafTranslation').textContent;
+    if (text && text !== '...') {
+        speakText(text);
+    }
+});
+
+function drawConnectors(ctx, landmarks, connections, options) {
+    if (!landmarks || !connections) return;
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    for (const connection of connections) {
+        const from = landmarks[connection[0]];
+        const to = landmarks[connection[1]];
+        if (from && to) {
             ctx.beginPath();
-            ctx.arc(landmark.x * width, landmark.y * height, options.radius || 2, 0, 2 * Math.PI);
-            ctx.fillStyle = options.fillColor || '#FF0000';
-            ctx.fill();
-            ctx.strokeStyle = options.color || '#ffffff';
-            ctx.lineWidth = 1;
+            ctx.moveTo(from.x * width, from.y * height);
+            ctx.lineTo(to.x * width, to.y * height);
+            ctx.strokeStyle = options.color || '#00FF00';
+            ctx.lineWidth = options.lineWidth || 2;
+            ctx.lineCap = 'round';
             ctx.stroke();
         }
     }
+}
 
-    const HAND_CONNECTIONS = [
-        [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
-        [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15],
-        [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]
-    ];
-
-    // Boshlang'ich xabar
-    speakText('Imo-ishora AI tizimi ishga tushdi');
-
-    // Toast Notifications System
-    function showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-
-        toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(100px)';
-            setTimeout(() => toast.remove(), 500);
-        }, 3000);
+function drawLandmarks(ctx, landmarks, options) {
+    if (!landmarks) return;
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    for (const landmark of landmarks) {
+        ctx.beginPath();
+        ctx.arc(landmark.x * width, landmark.y * height, options.radius || 2, 0, 2 * Math.PI);
+        ctx.fillStyle = options.fillColor || '#FF0000';
+        ctx.fill();
+        ctx.strokeStyle = options.color || '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
     }
+}
 
-    // Success Sound Effect (Synth)
-    function playSuccessSound() {
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+const HAND_CONNECTIONS = [
+    [0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8],
+    [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15],
+    [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]
+];
 
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+// Boshlang'ich xabar
+speakText('Imo-ishora AI tizimi ishga tushdi');
 
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+// Toast Notifications System
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
 
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.1);
-        } catch (e) {
-            console.warn("Sound blocked by browser policy");
-        }
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100px)';
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
+}
+
+// Success Sound Effect (Synth)
+function playSuccessSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, audioCtx.currentTime + 0.1);
+
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch (e) {
+        console.warn("Sound blocked by browser policy");
     }
+}
