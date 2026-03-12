@@ -5,11 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
-
-// Gemini API
-const genAI = new GoogleGenerativeAI('AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI');
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -17,14 +13,24 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Imo-ishora lug'atni yuklash
 let signDictionary = {};
-try {
-    const dictionaryData = fs.readFileSync(path.join(__dirname, 'sign_dictionary.json'), 'utf-8');
-    signDictionary = JSON.parse(dictionaryData);
-    console.log(`✅ Lug'at yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
-} catch (error) {
-    console.error('❌ Lug\'atni yuklashda xato:', error);
-    signDictionary = { "salom": { "original": "Salom", "description": "Salomlashish" } };
+const dictionaryPath = path.join(__dirname, 'sign_dictionary.json');
+
+function reloadDictionary() {
+    try {
+        if (fs.existsSync(dictionaryPath)) {
+            const dictionaryData = fs.readFileSync(dictionaryPath, 'utf-8');
+            signDictionary = JSON.parse(dictionaryData);
+            console.log(`✅ Lug'at muvaffaqiyatli yuklandi: ${Object.keys(signDictionary).length} ta belgi`);
+        } else {
+            console.warn('⚠️ sign_dictionary.json topilmadi, demo rejimida ishlanmoqda.');
+            signDictionary = { "salom": { "original": "Salom", "description": "Salomlashish" } };
+        }
+    } catch (error) {
+        console.error('❌ Lug\'atni yuklashda xato:', error);
+    }
 }
+
+reloadDictionary();
 
 // API endpointlar
 app.post('/api/translate/sign', async (req, res) => {

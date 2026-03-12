@@ -1,5 +1,7 @@
-// API sozlamalari
-const API_URL = 'http://localhost:3000';
+// API sozlamalari (Dual support: Local and Production)
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : window.location.origin;
 const GEMINI_API_KEY = 'AIzaSyDO4uO9XkdpNw1qwVMvcfrx6UWpOYDpGHI';
 
 // MediaPipe Hands
@@ -156,43 +158,48 @@ hands.onResults((results) => {
 
 // New function to draw hand image over joints with proper rotation
 function drawHandImage(ctx, landmarks) {
-    const handImg = document.querySelector('#rightHand img') || document.querySelector('#leftHand img');
-    if (!handImg || !handImg.complete) return;
+    try {
+        const handImg = document.querySelector('#rightHand img') || document.querySelector('#leftHand img');
+        if (!handImg || !handImg.complete) return;
 
-    // Use palm center and wrist to scale/rotate
-    const wrist = landmarks[0];
-    const indexMCP = landmarks[5];
-    const middleMCP = landmarks[9];
-    const pinkyMCP = landmarks[17];
+        // Use palm center and wrist to scale/rotate
+        const wrist = landmarks[0];
+        const middleMCP = landmarks[9];
+        const indexMCP = landmarks[5];
+        const pinkyMCP = landmarks[17];
 
-    // Average center of palm
-    const centerX = ((wrist.x + middleMCP.x) / 2) * ctx.canvas.width;
-    const centerY = ((wrist.y + middleMCP.y) / 2) * ctx.canvas.height;
+        if (!wrist || !middleMCP || !indexMCP || !pinkyMCP) return;
 
-    // Calculate rotation angle (from wrist to middle finger MCP)
-    const angle = Math.atan2(
-        (middleMCP.y - wrist.y) * ctx.canvas.height,
-        (middleMCP.x - wrist.x) * ctx.canvas.width
-    ) + Math.PI / 2; // Offset for image orientation
+        // Average center of palm
+        const centerX = ((wrist.x + middleMCP.x) / 2) * ctx.canvas.width;
+        const centerY = ((wrist.y + middleMCP.y) / 2) * ctx.canvas.height;
 
-    // Calculate scale based on palm width (Index MCP to Pinky MCP)
-    const dx = (indexMCP.x - pinkyMCP.x) * ctx.canvas.width;
-    const dy = (indexMCP.y - pinkyMCP.y) * ctx.canvas.height;
-    const width = Math.sqrt(dx * dx + dy * dy);
-    const size = width * 3.5;
+        // Calculate rotation angle (from wrist to middle finger MCP)
+        const angle = Math.atan2(
+            (middleMCP.y - wrist.y) * ctx.canvas.height,
+            (middleMCP.x - wrist.x) * ctx.canvas.width
+        ) + Math.PI / 2; // Offset for image orientation
 
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate(angle);
+        // Calculate scale based on palm width (Index MCP to Pinky MCP)
+        const dx = (indexMCP.x - pinkyMCP.x) * ctx.canvas.width;
+        const dy = (indexMCP.y - pinkyMCP.y) * ctx.canvas.height;
+        const width = Math.sqrt(dx * dx + dy * dy);
+        const size = width * 3.2; // Slightly reduced for better fit
 
-    // Draw semi-transparent professional hand highlight
-    ctx.globalAlpha = 0.6;
-    // Add a slight glow effect
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#00d2ff";
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle);
 
-    ctx.drawImage(handImg, -size / 2, -size / 2, size, size);
-    ctx.restore();
+        // Draw semi-transparent professional hand highlight
+        ctx.globalAlpha = 0.65;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#00d2ff";
+
+        ctx.drawImage(handImg, -size / 2, -size / 2, size, size);
+        ctx.restore();
+    } catch (e) {
+        console.warn("Hand drawing error:", e);
+    }
 }
 
 let lastSign = '';
@@ -208,7 +215,7 @@ function getFingerStates(landmarks) {
     const isExtended = (tip, mcp, wrist) => getDist(tip, wrist) > getDist(mcp, wrist);
 
     const states = {
-        thumb: getDist(landmarks[4], landmarks[17]) > getDist(landmarks[3], landmarks[17]), // Thumb is tricky
+        thumb: getDist(landmarks[4], landmarks[17]) > getDist(landmarks[3], landmarks[17]) && landmarks[4].x < landmarks[3].x, // Thumb is tricky
         index: landmarks[8].y < landmarks[6].y,
         middle: landmarks[12].y < landmarks[10].y,
         ring: landmarks[16].y < landmarks[14].y,
@@ -227,33 +234,41 @@ async function detectSign(multiHandLandmarks) {
     const fingerStates = getFingerStates(landmarks);
     const extendedFingers = Object.values(fingerStates).filter(state => state).length;
 
-    // Better Heuristic Detection
+    // Real-time Heuristic Logic (No random fallback)
     let matchedSign = '';
 
-    if (extendedFingers === 5) matchedSign = "salom";
-    else if (extendedFingers === 0) matchedSign = "rahmat";
-    else if (fingerStates.index && extendedFingers === 1) matchedSign = "men";
-    else if (fingerStates.thumb && fingerStates.pinky && extendedFingers === 2) matchedSign = "telefon";
-    else if (fingerStates.index && fingerStates.middle && extendedFingers === 2) matchedSign = "ikki";
-    else {
-        // Fallback or random from dictionary to keep it alive
-        const signs = Object.keys(signDictionary);
-        matchedSign = signs[Math.floor(Math.random() * (signs.length > 20 ? 20 : signs.length))];
+    // Simple but real rules
+    if (extendedFingers === 5) {
+        matchedSign = "salom";
+    } else if (extendedFingers === 0) {
+        matchedSign = "rahmat";
+    } else if (fingerStates.index && extendedFingers === 1) {
+        matchedSign = "men";
+    } else if (fingerStates.index && fingerStates.middle && extendedFingers === 2) {
+        matchedSign = "ikki";
+    } else if (fingerStates.thumb && fingerStates.pinky && extendedFingers === 2) {
+        matchedSign = "telefon";
     }
 
-    if (matchedSign === lastSign) {
-        signCount++;
+    // Only process if we actually matched something real
+    if (matchedSign) {
+        if (matchedSign === lastSign) {
+            signCount++;
+        } else {
+            lastSign = matchedSign;
+            signCount = 1;
+        }
+
+        if (signCount >= 15) { // High stability for 'Real Mode'
+            const sign = signDictionary[matchedSign];
+            if (sign) {
+                console.log("Real mode match:", matchedSign);
+                displayDetectedSign(matchedSign, sign);
+                signCount = 0;
+                lastSign = ''; // Reset to allow repeating the same sign after a pause
+            }
+        }
     } else {
-        lastSign = matchedSign;
-        signCount = 1;
-    }
-
-    if (signCount >= 12) { // Increased to 12 for better stability
-        const sign = signDictionary[matchedSign];
-        if (!sign) return;
-
-        console.log("Detected sign:", matchedSign);
-        displayDetectedSign(matchedSign, sign);
         signCount = 0;
     }
 }
@@ -362,11 +377,21 @@ let voices = [];
 
 function loadVoices() {
     voices = synth.getVoices();
-    console.log("Voices loaded:", voices.length);
+    if (voices.length > 0) {
+        console.log("✅ Ovozlar yuklandi:", voices.filter(v => v.lang.includes('uz') || v.lang.includes('tr') || v.lang.includes('ru')).length, "ta mos ovoz");
+    }
 }
 
-// Ensure voices are loaded
-loadVoices();
+// Robust voice loading loop
+const voiceInterval = setInterval(() => {
+    loadVoices();
+    if (voices.length > 0) {
+        clearInterval(voiceInterval);
+        // Initial greeting once voices are ready
+        speakText('Imo-ishora AI tizimi tayyor');
+    }
+}, 1000);
+
 if (speechSynthesis.onvoiceschanged !== undefined) {
     speechSynthesis.onvoiceschanged = loadVoices;
 }

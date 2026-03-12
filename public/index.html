@@ -201,14 +201,22 @@
             }
         }
 
-        #videoElement,
-        #canvasElement {
+        .video-container video,
+        .video-container canvas {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 20px;
+        }
+
+        @media (min-width: 1024px) {
+            .video-container {
+                max-height: 500px;
+                /* Prevent it from being too large on big screens */
+            }
         }
 
         /* Controls */
