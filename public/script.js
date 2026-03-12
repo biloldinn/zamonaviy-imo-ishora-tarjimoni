@@ -224,9 +224,16 @@ function getFingerStates(landmarks) {
     return states;
 }
 
+const PROGRESS_LIMIT = 15;
+
 async function detectSign(multiHandLandmarks) {
+    const progressEl = document.getElementById('detectProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressPercent');
+
     if (!multiHandLandmarks || multiHandLandmarks.length === 0) {
         signCount = 0;
+        if (progressEl) progressEl.style.display = 'none';
         return;
     }
 
@@ -234,24 +241,18 @@ async function detectSign(multiHandLandmarks) {
     const fingerStates = getFingerStates(landmarks);
     const extendedFingers = Object.values(fingerStates).filter(state => state).length;
 
-    // Real-time Heuristic Logic (No random fallback)
+    // Real-time Heuristic Logic
     let matchedSign = '';
 
-    // Simple but real rules
-    if (extendedFingers === 5) {
-        matchedSign = "salom";
-    } else if (extendedFingers === 0) {
-        matchedSign = "rahmat";
-    } else if (fingerStates.index && extendedFingers === 1) {
-        matchedSign = "men";
-    } else if (fingerStates.index && fingerStates.middle && extendedFingers === 2) {
-        matchedSign = "ikki";
-    } else if (fingerStates.thumb && fingerStates.pinky && extendedFingers === 2) {
-        matchedSign = "telefon";
-    }
+    if (extendedFingers === 5) matchedSign = "salom";
+    else if (extendedFingers === 0) matchedSign = "rahmat";
+    else if (fingerStates.index && extendedFingers === 1) matchedSign = "men";
+    else if (fingerStates.index && fingerStates.middle && extendedFingers === 2) matchedSign = "ikki";
+    else if (fingerStates.thumb && fingerStates.pinky && extendedFingers === 2) matchedSign = "telefon";
 
-    // Only process if we actually matched something real
     if (matchedSign) {
+        if (progressEl) progressEl.style.display = 'block';
+
         if (matchedSign === lastSign) {
             signCount++;
         } else {
@@ -259,17 +260,26 @@ async function detectSign(multiHandLandmarks) {
             signCount = 1;
         }
 
-        if (signCount >= 15) { // High stability for 'Real Mode'
+        // Update Circular Progress
+        const percent = Math.min((signCount / PROGRESS_LIMIT) * 100, 100);
+        const offset = 251.2 - (251.2 * percent) / 100;
+        if (progressBar) progressBar.style.strokeDashoffset = offset;
+        if (progressText) progressText.textContent = Math.round(percent) + '%';
+
+        if (signCount >= PROGRESS_LIMIT) {
             const sign = signDictionary[matchedSign];
             if (sign) {
-                console.log("Real mode match:", matchedSign);
+                playSuccessSound();
                 displayDetectedSign(matchedSign, sign);
+                showToast(`Aniqlangan belgi: ${sign.original}`, 'success');
                 signCount = 0;
-                lastSign = ''; // Reset to allow repeating the same sign after a pause
+                lastSign = '';
+                if (progressEl) progressEl.style.display = 'none';
             }
         }
     } else {
         signCount = 0;
+        if (progressEl) progressEl.style.display = 'none';
     }
 }
 
@@ -295,8 +305,13 @@ function displayDetectedSign(signKey, signData) {
 // AI javob olish (Routing through Backend to fix "Analyzing" hang)
 async function getAIResponse(signName) {
     try {
-        document.getElementById('deafLoading').style.display = 'inline-block';
-        document.getElementById('aiResponseText').textContent = 'Tahlil qilinmoqda...';
+        const loadingEl = document.getElementById('deafLoading');
+        const aiTextEl = document.getElementById('aiResponseText');
+        const avatarEl = document.getElementById('aiAvatar');
+
+        loadingEl.style.display = 'inline-block';
+        aiTextEl.textContent = 'Tahlil qilinmoqda...';
+        avatarEl.classList.add('thinking');
 
         const response = await fetch(`${API_URL}/api/translate/sign`, {
             method: 'POST',
@@ -306,16 +321,18 @@ async function getAIResponse(signName) {
 
         const data = await response.json();
         if (data.success) {
-            document.getElementById('aiResponseText').textContent = data.aiResponse;
+            aiTextEl.textContent = data.aiResponse;
             updateAvatar(data.aiResponse);
             textToSigns(data.aiResponse);
             addToHistory('ai', data.aiResponse);
         }
     } catch (error) {
         console.error('AI xatosi:', error);
-        document.getElementById('aiResponseText').textContent = 'Kechirasiz, AI bilan bog\'lanishda xatolik.';
+        document.getElementById('aiResponseText').textContent = 'Bog\'lanishda xatolik.';
+        showToast('AI bilan bog\'lanishda xatolik yuz berdi.', 'error');
     } finally {
         document.getElementById('deafLoading').style.display = 'none';
+        document.getElementById('aiAvatar').classList.remove('thinking');
     }
 }
 

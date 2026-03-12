@@ -19,15 +19,16 @@
             color: white;
         }
 
-        /* Navbar */
+        /* Navbar - Premium Glass */
         .navbar {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
+            background: rgba(26, 26, 46, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 1rem 2.5rem;
             position: sticky;
             top: 0;
             z-index: 1000;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 210, 255, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
         }
 
         .nav-container {
@@ -112,23 +113,27 @@
             padding: 1rem 3rem;
             border: none;
             border-radius: 50px;
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
-            background: rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: rgba(255, 255, 255, 0.05);
             color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .mode-btn.active {
             background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-            border: none;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);
         }
 
         .mode-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #00d2ff;
         }
 
         /* Translator Grid */
@@ -262,12 +267,57 @@
             box-shadow: 0 10px 30px rgba(0, 210, 255, 0.3);
         }
 
-        /* Translation Panel */
+        /* Detection Progress Indicator */
+        .detection-progress-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 80px;
+            height: 80px;
+            z-index: 100;
+            display: none;
+        }
+
+        .progress-circle {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .progress-circle circle {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke: rgba(255, 255, 255, 0.1);
+        }
+
+        .progress-circle .progress-bar {
+            stroke: #00d2ff;
+            stroke-dasharray: 251.2;
+            stroke-dashoffset: 251.2;
+            transition: stroke-dashoffset 0.1s linear;
+            filter: drop-shadow(0 0 5px #00d2ff);
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #00d2ff;
+        }
+
+        /* Translation Panel - Glass */
         .translation-panel {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             padding: 1.5rem;
             margin-top: 1rem;
+            transition: all 0.3s;
         }
 
         .translation-text {
@@ -463,109 +513,170 @@
             position: absolute;
             width: 150px;
             height: 150px;
-            background: radial-gradient(circle, rgba(0, 210, 255, 0.4) 0%, transparent 70%);
-            animation: pulse-glow 2s ease-in-out infinite;
-        }
 
-        @keyframes pulse-glow {
+            @keyframes pulse-glow {
 
-            0%,
-            100% {
-                transform: scale(1);
+                0%,
+                100% {
+                    transform: translate(-50%, -50%) scale(1);
+                    opacity: 0.3;
+                }
+
+                50% {
+                    transform: translate(-50%, -50%) scale(1.3);
+                    opacity: 0.6;
+                }
+            }
+
+            /* Toast Notifications */
+            .toast-container {
+                position: fixed;
+                bottom: 30px;
+                right: 30px;
+                z-index: 9999;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .toast {
+                background: rgba(26, 26, 46, 0.9);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(0, 210, 255, 0.3);
+                color: white;
+                padding: 1rem 2rem;
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slide-in-toast 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                min-width: 250px;
+            }
+
+            .toast.error {
+                border-color: #ff4757;
+            }
+
+            .toast.success {
+                border-color: #00b894;
+            }
+
+            @keyframes slide-in-toast {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            .thinking {
+                animation: thinking-blink 1.5s infinite;
+            }
+
+            @keyframes thinking-blink {
+
+                0%,
+                100% {
+                    opacity: 1;
+                    text-shadow: 0 0 20px #00d2ff;
+                }
+
+                50% {
+                    opacity: 0.5;
+                    text-shadow: 0 0 5px #00d2ff;
+                }
+            }
+
+            .sign-gesture {
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: #00d2ff;
+                text-transform: uppercase;
+                letter-spacing: 2px;
+                animation: slide-up 0.5s ease-out;
+            }
+
+            .sign-label {
+                background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+                padding: 0.5rem 1.5rem;
+                border-radius: 10px;
+                font-weight: bold;
+                font-size: 1.1rem;
+                box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
+            }
+
+            @keyframes slide-up {
+                from {
+                    transform: translateY(10px);
+                    opacity: 0;
+                }
+
+                to {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+            }
+
+            #aiAvatar {
+                font-size: 4rem;
+                color: white;
+                text-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
+            }
+
+            .hand {
+                width: 100px;
+                height: 100px;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(0, 210, 255, 0.3);
+                border-radius: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                position: relative;
+            }
+
+            .hand img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
+                filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
+            }
+
+            .hand.left {
+                transform: scaleX(-1);
+            }
+
+            .hand.active {
+                border-color: #00d2ff;
+                box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+                transform: translateY(-10px) scale(1.1);
+            }
+
+            .hand.left.active {
+                transform: translateY(-10px) scale(-1.1);
+            }
+
+            /* Video Glow */
+            .video-container::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                border: 2px solid #00d2ff;
+                border-radius: 20px;
+                pointer-events: none;
+                box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.2);
                 opacity: 0.5;
             }
-
-            50% {
-                transform: scale(1.2);
-                opacity: 0.8;
-            }
-        }
-
-        .sign-gesture {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #00d2ff;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            animation: slide-up 0.5s ease-out;
-        }
-
-        .sign-label {
-            background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
-            padding: 0.5rem 1.5rem;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
-        }
-
-        @keyframes slide-up {
-            from {
-                transform: translateY(10px);
-                opacity: 0;
-            }
-
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        #aiAvatar {
-            font-size: 4rem;
-            color: white;
-            text-shadow: 0 0 20px rgba(0, 210, 255, 0.8);
-        }
-
-        .hand {
-            width: 100px;
-            height: 100px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(0, 210, 255, 0.3);
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-        }
-
-        .hand img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.5));
-        }
-
-        .hand.left {
-            transform: scaleX(-1);
-        }
-
-        .hand.active {
-            border-color: #00d2ff;
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
-            transform: translateY(-10px) scale(1.1);
-        }
-
-        .hand.left.active {
-            transform: translateY(-10px) scale(-1.1);
-        }
-
-        /* Video Glow */
-        .video-container::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 2px solid #00d2ff;
-            border-radius: 20px;
-            pointer-events: none;
-            box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.2);
-            opacity: 0.5;
-        }
     </style>
 </head>
 
@@ -609,6 +720,15 @@
                 <div class="video-container">
                     <video id="deafVideo" autoplay playsinline></video>
                     <canvas id="deafCanvas"></canvas>
+
+                    <!-- Detection Progress -->
+                    <div class="detection-progress-container" id="detectProgress">
+                        <svg class="progress-circle">
+                            <circle cx="40" cy="40" r="32"></circle>
+                            <circle cx="40" cy="40" r="32" class="progress-bar" id="progressBar"></circle>
+                        </svg>
+                        <div class="progress-text" id="progressPercent">0%</div>
+                    </div>
                 </div>
 
                 <div class="controls">
@@ -884,6 +1004,7 @@
         </div>
     </div>
 
+    <div class="toast-container" id="toastContainer"></div>
     <script src="script.js"></script>
 </body>
 
