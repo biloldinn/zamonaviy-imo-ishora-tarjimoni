@@ -127,23 +127,10 @@ hands.onResults((results) => {
 
     if (results.multiHandLandmarks) {
         for (const landmarks of results.multiHandLandmarks) {
-            // Update 3D hand model regardless of showSkeleton setting
+            // Update 3D hand model (separate panel)
             update3DHand(landmarks);
 
-            // Only draw 2D skeleton if showSkeleton is enabled
-            if (settings.showSkeleton) {
-                // Professional Hand Image Overlay instead of skeleton
-                // drawHandImage(activeCtx, landmarks); // This function is now primarily for 3D update
-
-                // Draw MediaPipe's default skeleton for 2D visualization
-                drawConnectors(activeCtx, landmarks, Hands.HAND_CONNECTIONS, { color: '#00d2ff', lineWidth: 2 });
-                drawLandmarks(activeCtx, landmarks, { color: '#ffffff', lineWidth: 1, radius: 2 });
-            }
-            drawLandmarks(activeCtx, landmarks, {
-                color: '#00d2ff',
-                fillColor: '#ffffff',
-                radius: 2
-            });
+            // 2D Skeleton is COMPLETELY REMOVED from camera to avoid visual clutter
         }
 
         // Always detect sign
@@ -400,56 +387,56 @@ function displayDetectedSign(signKey, signData) {
     const translationEl = document.getElementById('deafTranslation');
     const descriptionEl = document.getElementById('deafDescription');
 
-    // If same as before, only repeat if it was long ago or if triggered again
-    // To fix "stuck at 100%" feel, we allow repeat every time it hits 100%
-    // but we can skip AI call if it's the exact same message to save tokens
+    // Only show the clean word, not the whole dictionary entry
+    const cleanTitle = signData.original.split(/[(\[,]/)[0].trim();
+    translationEl.textContent = cleanTitle;
 
-    translationEl.textContent = signData.original;
-    descriptionEl.textContent = signData.description;
+    // Shorten description if it's too long
+    const cleanDesc = signData.description.split('.')[0] + '.';
+    descriptionEl.textContent = cleanDesc;
 
-    // Ovozli chiqarish
-    speakText(signData.original);
-
-    // AI javob olish (Gemini)
-    getAIResponse(signData.original);
-
-    // Tarixga qo'shish
-    addToHistory('imo-ishora', signData.original);
+    speakText(cleanTitle);
+    getAIResponse(cleanTitle);
+    addToHistory('imo-ishora', cleanTitle);
 }
 
-// AI javob olish (Routing through Backend to fix "Analyzing" hang)
 async function getAIResponse(signName) {
-    try {
-        const thinkingEl = document.getElementById('aiThinking');
-        const aiTextEl = document.getElementById('aiResponseText');
+    const thinkingEl = document.getElementById('aiThinking');
+    const aiTextEl = document.getElementById('aiResponseText');
 
+    try {
         if (thinkingEl) thinkingEl.style.display = 'flex';
         aiTextEl.textContent = 'AI tahlil qilmoqda...';
         aiTextEl.style.opacity = '0.5';
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
         const response = await fetch(`${API_URL}/api/translate/sign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sign: signName })
+            body: JSON.stringify({ sign: signName }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         const data = await response.json();
         if (data.success) {
             aiTextEl.textContent = data.aiResponse;
-            aiTextEl.style.opacity = '1';
-            speakText(data.aiResponse); // Read out in Uzbek
-            update3DFromText(data.aiResponse); // Show in 3D
+            speakText(data.aiResponse);
+            update3DFromText(data.aiResponse);
             textToSigns(data.aiResponse);
             addToHistory('ai', data.aiResponse);
+        } else {
+            aiTextEl.textContent = "AI javob bera olmadi.";
         }
     } catch (error) {
         console.error('AI xatosi:', error);
-        document.getElementById('aiResponseText').textContent = 'Bog\'lanishda xatolik.';
-        showToast('AI bilan bog\'lanishda xatolik yuz berdi.', 'error');
+        aiTextEl.textContent = error.name === 'AbortError' ? 'AI javobi kechikmoqda...' : 'Bog\'lanishda xatolik.';
     } finally {
-        const thinkingEl = document.getElementById('aiThinking');
         if (thinkingEl) thinkingEl.style.display = 'none';
-        document.getElementById('aiResponseText').style.opacity = '1';
+        aiTextEl.style.opacity = '1';
     }
 }
 
@@ -558,20 +545,30 @@ function speakText(text) {
     console.log("Speaking:", text);
 }
 
-// O'zbekcha ovozli o'qish (TTS)
+// O'zbekcha ovozli o'qish (Optimized TTS)
 function speakText(text) {
     if (!window.speechSynthesis) return;
+
+    // Stop any current speaking to avoid overlap
+    window.speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(text);
-
-    // Uzbek voice lookup (fallback to similar sounding if missing)
     const voices = window.speechSynthesis.getVoices();
-    let uzVoice = voices.find(v => v.lang.startsWith('uz') || v.name.includes('Uzbek'));
-    if (!uzVoice) uzVoice = voices.find(v => v.lang.startsWith('tr') || v.name.includes('Turkish')); // Fallback to Turkish if Uzbek is unavailable
 
-    if (uzVoice) utterance.voice = uzVoice;
-    utterance.rate = 0.9;
+    // 1. Try to find actual Uzbek voice (Google O'zbekcha)
+    // 2. Fallback to Turkish (sounds very similar and usually available)
+    // 3. Fallback to Russian/English if necessary
+    let voice = voices.find(v => v.lang.startsWith('uz') || v.name.toLowerCase().includes('uzbek'));
+    if (!voice) voice = voices.find(v => v.lang.startsWith('tr') || v.name.toLowerCase().includes('turkish'));
+    if (!voice) voice = voices.find(v => v.lang.startsWith('ru'));
+
+    if (voice) utterance.voice = voice;
+    utterance.rate = 1.0;
     utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
     window.speechSynthesis.speak(utterance);
+    console.log("Speaking (Ovozli chiqish):", text);
 }
 
 // Ovozdan Imo-ishoraga aylantirish (Voice to 3D Sign)
