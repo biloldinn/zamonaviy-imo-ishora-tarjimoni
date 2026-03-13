@@ -117,15 +117,52 @@ app.post('/api/translate/sign', async (req, res) => {
 app.post('/api/chat', async (req, res) => {
     const { message } = req.body;
     try {
-        const prompt = `${SYSTEM_PROMPT}
-        
-        FOYDALANUVCHI SAVOLI: "${message}"
-        
-        Unga o'zbek tilida qisqa, aqlli va do'stona javob bering.`;
+        const prompt = `${SYSTEM_PROMPT}\n\nFOYDALANUVCHI SAVOLI: "${message}"\n\nUnga o'zbek tilida qisqa, aqlli va do'stona javob bering.`;
         const result = await model.generateContent(prompt);
         res.json({ success: true, aiResponse: result.response.text() });
     } catch (error) {
         res.status(500).json({ success: false, error: 'Chat xatosi' });
+    }
+});
+
+// Ovozdan imo-ishoraga tarjima (Voice -> Sign)
+app.post('/api/voice-to-sign', async (req, res) => {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success: false, error: 'Matn kerak' });
+
+    const words = text.toLowerCase().split(/\s+/);
+    const foundSigns = [];
+    const notFound = [];
+
+    words.forEach(word => {
+        const clean = word.replace(/[.,!?;:]/g, '').trim();
+        if (!clean) return;
+        if (signDictionary[clean]) {
+            foundSigns.push({ word: clean, data: signDictionary[clean] });
+        } else {
+            notFound.push(clean);
+        }
+    });
+
+    try {
+        const signList = foundSigns.map(s => `"${s.word}" - ${s.data.description}`).join('\n');
+        const prompt = `${SYSTEM_PROMPT}\n\nFOYDALANUVCHI GAPIRDI: "${text}"\n\nLUG'ATDA TOPILGAN IMO-ISHORALAR:\n${signList || 'Hech biri topilmadi.'}\nTOPILMAGAN SO'ZLAR: ${notFound.join(', ') || 'yo\'q'}\n\nVAZIFA: 2-3 gapda o'zbek tilida tushuntiring: bu gapni imo-ishoraga qanday aylantirishni va qaysi qo'l harakatlarini ishlatishni aytib bering.`;
+        const result = await model.generateContent(prompt);
+        res.json({
+            success: true,
+            original: text,
+            signs: foundSigns.map(s => ({ word: s.word, translation: s.data.original, description: s.data.description })),
+            notFound,
+            aiGuide: result.response.text()
+        });
+    } catch (err) {
+        res.json({
+            success: true,
+            original: text,
+            signs: foundSigns.map(s => ({ word: s.word, translation: s.data.original, description: s.data.description })),
+            notFound,
+            aiGuide: `"${text}" gapini imo-ishoraga aylantirish uchun har bir so'zni daktil alifbosi bilan ko'rsating.`
+        });
     }
 });
 

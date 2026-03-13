@@ -17,7 +17,7 @@ let currentQuizTarget = '';
 let quizScore = 0;
 let lastSign = '';
 let signCount = 0;
-const PROGRESS_LIMIT = 15;
+// PROGRESS_LIMIT moved to detection section
 
 // 3D scene globals
 let threeScene, threeCamera, threeRenderer;
@@ -167,15 +167,25 @@ function update3DHand(results) {
 // SIGN DETECTION
 // ============================================================
 function getFingerStates(landmarks) {
+    // Improved: use both X and Y for better accuracy
+    const wrist = landmarks[0];
+    // Finger tips: 4 (thumb), 8 (index), 12 (middle), 16 (ring), 20 (pinky)
+    // Finger PIPs: 3 (thumb), 6 (index), 10 (middle), 14 (ring), 18 (pinky)
     return {
-        thumb: Math.sqrt((landmarks[4].x - landmarks[17].x) ** 2 + (landmarks[4].y - landmarks[17].y) ** 2) >
-            Math.sqrt((landmarks[3].x - landmarks[17].x) ** 2 + (landmarks[3].y - landmarks[17].y) ** 2),
-        index: landmarks[8].y < landmarks[6].y,
-        middle: landmarks[12].y < landmarks[10].y,
-        ring: landmarks[16].y < landmarks[14].y,
-        pinky: landmarks[20].y < landmarks[18].y
+        // Thumb: check if tip is far from wrist (compared to PIP)
+        thumb: Math.hypot(landmarks[4].x - wrist.x, landmarks[4].y - wrist.y) >
+            Math.hypot(landmarks[2].x - wrist.x, landmarks[2].y - wrist.y) * 1.1,
+        // For other fingers: tip Y is above PIP Y (extended up)
+        index: landmarks[8].y < landmarks[6].y - 0.02,
+        middle: landmarks[12].y < landmarks[10].y - 0.02,
+        ring: landmarks[16].y < landmarks[14].y - 0.02,
+        pinky: landmarks[20].y < landmarks[18].y - 0.02
     };
 }
+
+const PROGRESS_LIMIT = 8; // Low threshold for fast detection
+let lastSignTime = 0;
+const SIGN_COOLDOWN_MS = 2000; // Don't repeat same sign within 2 seconds
 
 async function detectSign(multiHandLandmarks) {
     const progressEl = document.getElementById('detectProgress');
@@ -193,11 +203,11 @@ async function detectSign(multiHandLandmarks) {
     const ext = Object.values(f).filter(Boolean).length;
 
     let matched = '';
-    if (ext === 5) matched = 'salom';
+    if (ext >= 4 && f.index && f.middle && f.ring && f.pinky) matched = 'salom';
     else if (ext === 0) matched = 'rahmat';
-    else if (f.index && ext === 1) matched = 'men';
-    else if (f.index && f.middle && ext === 2) matched = 'ikki';
-    else if (f.thumb && f.pinky && ext === 2) matched = 'telefon';
+    else if (f.index && !f.middle && !f.ring && !f.pinky) matched = 'men';
+    else if (f.index && f.middle && !f.ring && !f.pinky) matched = 'ikki';
+    else if (f.thumb && f.pinky && !f.index && !f.middle && !f.ring) matched = 'telefon';
 
     if (matched) {
         if (progressEl) progressEl.style.display = 'block';
@@ -210,12 +220,16 @@ async function detectSign(multiHandLandmarks) {
 
         if (signCount >= PROGRESS_LIMIT) {
             const signData = signDictionary[matched];
-            if (signData) {
+            const now = Date.now();
+            if (signData && now - lastSignTime > SIGN_COOLDOWN_MS) {
+                lastSignTime = now;
                 playSuccessSound();
                 displayDetectedSign(matched, signData);
-                showToast(`Aniqlandi: ${signData.original}`, 'success');
+                showToast(`✅ Aniqlandi: ${signData.original}`, 'success');
                 signCount = 0; lastSign = '';
                 if (progressEl) progressEl.style.display = 'none';
+            } else {
+                signCount = 0; // Reset if sign is in cooldown
             }
         }
     } else {
@@ -293,20 +307,105 @@ async function getAIChatResponse(message) {
 }
 
 // ============================================================
-// SPEECH (TTS)
+// VOICE TO SIGN (Hearing Mode)
 // ============================================================
+async function processVoiceToSign(text) {
+    const signOutputEl = document.getElementById('signOutput');
+    const signTranslEl = document.getElementById('signTranslation');
+    const aiGuideEl = document.getElementById('aiResponseText');
+
+    if (signOutputEl) signOutputEl.innerHTML = '<div style="color:#aaa;padding:1rem;">⏳ Tarjima qilinmoqda...</div>';
+    if (aiGuideEl) { aiGuideEl.textContent = 'AI tahlil qilmoqda...'; aiGuideEl.style.opacity = '0.5'; }
+
+    try {
+        const response = await fetch(`${API_URL}/api/voice-to-sign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error);
+
+        // Show sign cards
+        if (signOutputEl) {
+            let html = '';
+            data.signs.forEach(s => {
+                html += `<div style="
+                    background:rgba(0,210,255,0.1);
+                    border:1px solid rgba(0,210,255,0.3);
+                    border-radius:15px;
+                    padding:1rem;
+                    margin:0.5rem 0;
+                    animation: fadeIn 0.3s ease;">
+                    <div style="font-weight:700;font-size:1.1rem;color:#00d2ff;">${s.word.toUpperCase()}</div>
+                    <div style="font-size:0.9rem;color:#aaa;margin-top:0.3rem;">${s.translation}</div>
+                    <div style="font-size:0.8rem;color:#888;margin-top:0.3rem;">👋 ${s.description}</div>
+                </div>`;
+            });
+            if (data.notFound && data.notFound.length > 0) {
+                html += `<div style="
+                    background:rgba(255,200,0,0.08);
+                    border:1px solid rgba(255,200,0,0.2);
+                    border-radius:15px;
+                    padding:1rem;
+                    margin:0.5rem 0;">
+                    <div style="font-weight:700;color:#ffc800;">🔤 Daktil bilan yoziladi:</div>
+                    <div style="color:#aaa;margin-top:0.3rem;">${data.notFound.map(w => w.toUpperCase()).join(' • ')}</div>
+                </div>`;
+            }
+            signOutputEl.innerHTML = html || '<div style="color:#888">Belgi topilmadi</div>';
+        }
+
+        // Show AI guide text
+        if (aiGuideEl) { aiGuideEl.textContent = data.aiGuide; aiGuideEl.style.opacity = '1'; }
+        if (signTranslEl) signTranslEl.textContent = text;
+
+        // Speak the guide
+        speakText(data.aiGuide);
+        addToHistory('matn', text);
+
+    } catch (err) {
+        console.error('Voice-to-sign error:', err);
+        if (signOutputEl) signOutputEl.innerHTML = '<div style="color:#f44">Xatolik yuz berdi</div>';
+        if (aiGuideEl) { aiGuideEl.textContent = 'Tarjimada xatolik.'; aiGuideEl.style.opacity = '1'; }
+    }
+}
+
+// ============================================================
+// SPEECH (TTS) - Fixed for browser policy
+// ============================================================
+let voicesReady = false;
+let pendingSpeak = null;
+
 function speakText(text) {
     if (!text || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+
+    const doSpeak = () => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        let voice = voices.find(v => v.lang.startsWith('uz') || v.name.toLowerCase().includes('uzbek'))
+            || voices.find(v => v.lang.startsWith('tr'))
+            || voices.find(v => v.lang.startsWith('ru'))
+            || voices.find(v => v.default);
+        if (voice) utterance.voice = voice;
+        utterance.rate = (settings && settings.speechRate) || 0.9;
+        utterance.volume = (settings && settings.speechVolume) || 1.0;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+        console.log('🔊 Speaking:', text);
+    };
+
     const voices = window.speechSynthesis.getVoices();
-    let voice = voices.find(v => v.lang.startsWith('uz') || v.name.toLowerCase().includes('uzbek'))
-        || voices.find(v => v.lang.startsWith('tr'))
-        || voices.find(v => v.lang.startsWith('ru'));
-    if (voice) utterance.voice = voice;
-    utterance.rate = settings.speechRate || 1.0;
-    utterance.volume = settings.speechVolume || 1.0;
-    window.speechSynthesis.speak(utterance);
+    if (voices.length > 0) {
+        doSpeak();
+    } else {
+        // Wait for voices to load
+        window.speechSynthesis.onvoiceschanged = () => {
+            window.speechSynthesis.onvoiceschanged = null;
+            doSpeak();
+        };
+    }
 }
 
 // ============================================================
@@ -382,7 +481,7 @@ function startSpeechRecognition() {
         if (final.trim()) {
             const userSpeechEl = document.getElementById('userSpeech');
             if (userSpeechEl) userSpeechEl.textContent = final.trim();
-            getAIChatResponse(final.trim());
+            processVoiceToSign(final.trim());
         }
     };
     recognition.onerror = (e) => { console.error('STT Error:', e.error); stopVoiceRecognition(); };
