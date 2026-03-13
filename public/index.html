@@ -45,14 +45,6 @@
             border-radius: 10px;
         }
 
-        .glass-panel {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }
-
         .navbar {
             background: rgba(26, 26, 46, 0.8);
             backdrop-filter: blur(25px);
@@ -90,26 +82,10 @@
             position: relative;
         }
 
-        .nav-links a::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--primary);
-            transition: width 0.3s;
-        }
-
         .nav-links a:hover,
         .nav-links a.active {
             color: white;
             text-shadow: var(--neon-glow);
-        }
-
-        .nav-links a:hover::after,
-        .nav-links a.active::after {
-            width: 100%;
         }
 
         .main-container {
@@ -118,12 +94,16 @@
             padding: 0 2rem;
         }
 
-        /* Holographic Effects (Mukammal) */
         .avatar-container {
             position: relative;
             background: radial-gradient(circle at center, rgba(0, 210, 255, 0.05) 0%, transparent 70%);
             overflow: hidden;
             border-radius: 20px;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid var(--glass-border);
         }
 
         .avatar-glow-ring {
@@ -131,13 +111,14 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 300px;
-            height: 300px;
-            border: 2px solid rgba(0, 210, 255, 0.1);
+            width: 320px;
+            height: 320px;
+            border: 2px solid rgba(0, 210, 255, 0.15);
             border-radius: 50%;
-            box-shadow: 0 0 50px rgba(0, 210, 255, 0.1);
+            box-shadow: 0 0 60px rgba(0, 210, 255, 0.2);
             animation: pulse-ring 4s infinite ease-in-out;
             pointer-events: none;
+            z-index: 1;
         }
 
         @keyframes pulse-ring {
@@ -148,8 +129,8 @@
             }
 
             50% {
-                width: 320px;
-                height: 320px;
+                width: 340px;
+                height: 340px;
                 opacity: 0.1;
             }
 
@@ -160,8 +141,12 @@
             }
         }
 
-        #hand3DContainer canvas {
-            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.4));
+        #hand3DContainer {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, #1a2a44 0%, #0f172a 100%);
+            border-radius: 20px;
+            position: relative;
         }
 
         .hero {
@@ -172,19 +157,6 @@
             margin-bottom: 3rem;
             text-align: center;
             border: 1px solid var(--glass-border);
-            animation: fadeInDown 1s ease-out;
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
         }
 
         .hero h1 {
@@ -192,6 +164,7 @@
             margin-bottom: 1.5rem;
             background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 900;
         }
@@ -209,19 +182,16 @@
             font-size: 1.2rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.5s;
             background: var(--glass);
             color: white;
             border: 1px solid var(--glass-border);
             text-transform: uppercase;
-            letter-spacing: 2px;
         }
 
         .mode-btn.active {
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            border-color: transparent;
             box-shadow: 0 0 30px rgba(0, 210, 255, 0.6);
-            transform: scale(1.05);
         }
 
         .translator-grid {
@@ -236,25 +206,6 @@
             border-radius: 40px;
             padding: 2.5rem;
             border: 1px solid var(--glass-border);
-            transition: all 0.4s;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 210, 255, 0.05) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
         }
 
         .video-container {
@@ -264,22 +215,23 @@
             overflow: hidden;
             background: #000;
             aspect-ratio: 16/9;
-            border: 2px solid var(--glass-border);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
-        canvas,
-        video {
+        video,
+        canvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
             border-radius: 30px;
         }
 
         .translation-panel {
             background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--glass-border);
             border-radius: 25px;
             padding: 2rem;
             margin-top: 1.5rem;
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
         }
 
         .translation-text {
@@ -290,48 +242,12 @@
             margin: 1rem 0;
         }
 
-        /* 3D Container */
-        #hand3DContainer {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: radial-gradient(circle, #232345 0%, #1a1a2e 100%);
-            border-radius: 25px;
-        }
-
-        .avatar-glow-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            box-shadow: 0 0 50px 20px var(--accent), inset 0 0 50px 20px var(--accent);
-            opacity: 0.3;
-            animation: pulseGlow 3s infinite alternate;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        @keyframes pulseGlow {
-            from {
-                transform: translate(-50%, -50%) scale(0.95);
-                opacity: 0.3;
-            }
-
-            to {
-                transform: translate(-50%, -50%) scale(1.05);
-                opacity: 0.5;
-            }
-        }
-
         .btn {
-            padding: 1rem 2rem;
+            padding: 1rem 2.5rem;
             border-radius: 100px;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: 0.3s;
             border: none;
             display: flex;
             align-items: center;
@@ -343,12 +259,11 @@
             color: white;
         }
 
-        .btn-primary:hover {
-            transform: scale(1.05);
-            box-shadow: var(--neon-glow);
+        .btn-danger {
+            background: #ff4757;
+            color: white;
         }
 
-        /* AI Thinking Animation */
         .thinking-dots {
             display: flex;
             gap: 5px;
@@ -360,14 +275,6 @@
             background: var(--primary);
             border-radius: 50%;
             animation: pulse 1.5s infinite;
-        }
-
-        .dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .dot:nth-child(3) {
-            animation-delay: 0.4s;
         }
 
         @keyframes pulse {
@@ -384,7 +291,6 @@
             }
         }
 
-        /* Responsive */
         @media (max-width: 1024px) {
             .translator-grid {
                 grid-template-columns: 1fr;
@@ -397,7 +303,6 @@
     </style>
     <!-- Three.js Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    </style>
 </head>
 
 <body>
@@ -418,318 +323,121 @@
         <div class="hero">
             <h1>Ikki tomonlama AI tarjimon</h1>
             <p>Imo-ishora tili ↔ O'zbek tili | Sun'iy intellekt asosida real vaqtda tarjima</p>
-
             <div class="mode-selector">
                 <button class="mode-btn active" data-mode="deaf">Imo-ishora rejimi</button>
                 <button class="mode-btn" data-mode="hearing">Ovozli rejim</button>
             </div>
         </div>
 
-        <!-- Imo-ishora rejimi -->
         <div id="deafMode" class="translator-grid">
-            <!-- Chap taraf: Kamera -->
             <div class="card">
                 <div class="card-header">
-                    <div class="card-icon">CAM</div>
-                    <div>
-                        <div class="card-title">Imo-ishora kamerasi</div>
-                        <div class="card-subtitle">Qo'l harakatlaringizni ko'rsating</div>
-                    </div>
+                    <div class="card-title">Imo-ishora kamerasi</div>
                 </div>
-
                 <div class="video-container">
-                    <video id="deafVideo" autoplay playsinline></video>
+                    <video id="deafVideo" autoplay playsinline muted></video>
                     <canvas id="deafCanvas"></canvas>
-
-                    <!-- Detection Progress -->
-                    <div class="detection-progress-container" id="detectProgress">
-                        <svg class="progress-circle">
-                            <circle cx="40" cy="40" r="32"></circle>
-                            <circle cx="40" cy="40" r="32" class="progress-bar" id="progressBar"></circle>
-                        </svg>
-                        <div class="progress-text" id="progressPercent">0%</div>
-                    </div>
                 </div>
-
-                <div class="controls">
+                <div class="controls" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
                     <button class="btn btn-primary" id="startDeafCamera">▶ Boshlash</button>
                     <button class="btn btn-danger" id="stopDeafCamera">⏹ To'xtatish</button>
                 </div>
-
                 <div class="translation-panel">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>🔴 AI tahlil qilmoqda</span>
-                        <span class="loading" id="deafLoading"></span>
-                    </div>
                     <div class="translation-text" id="deafTranslation">...</div>
                     <div class="translation-desc" id="deafDescription">Imo-ishorani ko'rsating</div>
-
-                    <div style="margin-top:1rem; display:flex; gap:10px;">
-                        <button class="btn btn-primary" id="sendSignToSpeech"
-                            style="flex:1; background:linear-gradient(135deg, #00b894, #00d2ff);">📤 Yuborish
-                            (Gapirtirish)</button>
-                    </div>
-
-                    <div class="sign-display" id="deafSigns">
-                        <!-- Signs will be injected here -->
-                    </div>
-
-                    <div class="voice-indicator">
-                        <span>🔊 Ovozli chiqish</span>
-                        <div class="voice-wave">
-                            <div class="wave-bar" style="animation-delay: 0s"></div>
-                            <div class="wave-bar" style="animation-delay: 0.1s"></div>
-                            <div class="wave-bar" style="animation-delay: 0.2s"></div>
-                            <div class="wave-bar" style="animation-delay: 0.3s"></div>
-                            <div class="wave-bar" style="animation-delay: 0.4s"></div>
-                        </div>
-                        <button class="btn btn-outline" id="speakTranslation" title="Tarjimani tinglash">🔊</button>
-                        <button class="btn btn-outline" id="testVoice" title="Ovozni sinash"
-                            style="border-color: #00b894; color: #00b894;">Sinash</button>
-                    </div>
+                    <button class="btn btn-primary" id="sendSignToSpeech" style="width: 100%; margin-top: 1rem;">📤
+                        Yuborish (Gapirtirish)</button>
+                    <div class="sign-display" id="deafSigns"></div>
                 </div>
             </div>
 
-            <!-- O'ng taraf: AI javob -->
-            <div class="avatar-container" style="height: 400px; position: relative;">
-                <div class="avatar-glow-ring"></div>
-                <div id="hand3DContainer">
-                    <!-- Three.js renderer will be here -->
-                    <div class="ai-status" style="position: absolute; top: 15px; right: 20px; z-index: 100;">
-                        <span class="badge bg-success">AI ACTIVE</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="translation-panel">
-                <div class="thinking-dots" id="aiThinking" style="display: none;">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-                <div class="translation-text" id="aiResponseText" style="font-size: 1.8rem;">
-                    Tayyorman! Harakatlarni ko'rsating.
-                </div>
-                <div class="sign-display" id="aiResponseSigns"></div>
-            </div>
-        </div>
-
-        <!-- Hearing Mode (Eshitadiganlar uchun) -->
-        <div id="hearingMode" class="translator-grid" style="display: none;">
-            <!-- Chap taraf: Mikrofon -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">MIC</div>
-                    <div>
-                        <div class="card-title">Ovozli kirish</div>
-                        <div class="card-subtitle">Gapiring, AI imo-ishoraga aylantiradi</div>
-                    </div>
-                </div>
-
-                <div class="voice-indicator" style="margin-bottom: 1rem;">
-                    <span>MIC</span>
-                    <div class="voice-wave">
-                        <div class="wave-bar" style="animation-delay: 0s"></div>
-                        <div class="wave-bar" style="animation-delay: 0.1s"></div>
-                        <div class="wave-bar" style="animation-delay: 0.2s"></div>
-                        <div class="wave-bar" style="animation-delay: 0.3s"></div>
-                        <div class="wave-bar" style="animation-delay: 0.4s"></div>
-                    </div>
-                </div>
-
-                <div class="controls">
-                    <button class="btn btn-primary" id="startListening">MIC Boshlash</button>
-                    <button class="btn btn-danger" id="stopListening">To'xtatish</button>
-                </div>
-
-                <div class="translation-panel">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>Sizning gapingiz:</span>
-                        <span class="loading" id="speechLoading"></span>
-                    </div>
-                    <div class="translation-text" id="userSpeech" style="font-size: 1.2rem;">
-                        ...
-                    </div>
-                </div>
-
-                <div class="card-footer" style="padding:1.5rem; background:rgba(255,255,255,0.02);">
-                    <div style="display:flex; gap:10px; margin-bottom:1rem;">
-                        <input type="text" id="manualSentenceInput" placeholder="Gapni yozing..."
-                            style="flex:1; padding:0.8rem 1.2rem; border-radius:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(0,210,255,0.3); color:white; outline:none;">
-                        <button class="btn btn-primary" id="manualAnimateBtn">🎬 Ko'rsatish</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- O'ng taraf: Imo-ishora chiqish -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">SIGN</div>
-                    <div>
-                        <div class="card-title">Imo-ishora chiqish</div>
-                        <div class="card-subtitle">AI imo-ishoraga aylantirdi</div>
-                    </div>
-                </div>
-
+            <div class="card" style="padding: 0; background: transparent; border: none;">
                 <div class="avatar-container">
-                    <div class="avatar-3d" id="signAvatar">
-                        🧑
-                    </div>
-                    <div class="avatar-hands">
-                        <div class="hand left" id="signLeftHand"><img src="assets/hand.png" alt="Hand"></div>
-                        <div class="hand" id="signRightHand"><img src="assets/hand.png" alt="Hand"></div>
-                    </div>
+                    <div class="avatar-glow-ring"></div>
+                    <div id="hand3DContainer"></div>
                 </div>
-
-                <div class="sign-display" id="signOutput">
-                    <div class="sign-item">
-                        <span class="sign-emoji">👋</span>
-                        <span class="sign-word">salom</span>
+                <div class="translation-panel" style="margin-top: 1.5rem; background: var(--glass);">
+                    <div class="thinking-dots" id="aiThinking" style="display: none;">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
                     </div>
-                    <div class="sign-item">
-                        <span class="sign-emoji">👤</span>
-                        <span class="sign-word">men</span>
-                    </div>
-                </div>
-
-                <div class="translation-text" id="signTranslation" style="font-size: 1.5rem; margin-top: 1rem;">
-                    Salom, men AI
+                    <div class="translation-text" id="aiResponseText" style="font-size: 1.8rem;">Tayyorman! Harakatlarni
+                        ko'rsating.</div>
                 </div>
             </div>
         </div>
 
-        <!-- Lug'at bo'limi -->
+        <div id="hearingMode" class="translator-grid" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Ovozli kirish</div>
+                </div>
+                <div class="controls"><button class="btn btn-primary" id="startListening">🎤 Boshlash</button></div>
+                <div class="translation-panel">
+                    <div class="translation-text" id="userSpeech" style="font-size: 1.2rem;">...</div>
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; gap: 10px;">
+                    <input type="text" id="manualSentenceInput" placeholder="Gapni yozing..."
+                        style="flex: 1; padding: 1rem; border-radius: 15px; background: rgba(0,0,0,0.3); color: white; border: 1px solid var(--glass-border);">
+                    <button class="btn btn-primary" id="manualAnimateBtn">🎬 Ko'rsatish</button>
+                </div>
+            </div>
+            <div class="card">
+                <div id="signOutput"></div>
+            </div>
+        </div>
+
         <div id="librarySection" style="display: none;">
             <div class="card">
-                <div class="card-header">
-                    <div class="card-icon">LIB</div>
-                    <div>
-                        <div class="card-title">Imo-ishora lug'ati</div>
-                        <div class="card-subtitle">Barcha 720+ belgilarni ko'ring va qidiring</div>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 2rem;">
-                    <input type="text" id="librarySearch" placeholder="Belgini qidiring..."
-                        style="width: 100%; padding: 1.2rem 2rem; border-radius: 50px; background: rgba(255,255,255,0.05); border: 1px solid rgba(0,210,255,0.2); color: white; font-size: 1.1rem; outline: none; transition: all 0.3s; margin-top: 1rem;">
-                </div>
-
+                <div class="card-title">Imo-ishora lug'ati</div>
+                <input type="text" id="librarySearch" placeholder="Belgini qidiring..."
+                    style="width:100%; padding:1rem; border-radius:50px; margin:1rem 0; background:rgba(0,0,0,0.3); color:white;">
                 <div id="libraryList"
-                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; max-height: 600px; overflow-y: auto; padding-right: 1rem;">
-                    <!-- Library items will be injected here -->
+                    style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto;">
                 </div>
             </div>
         </div>
 
-        <!-- Quiz bo'limi -->
         <div id="quizSection" style="display: none;">
             <div class="translator-grid">
                 <div class="card">
-                    <div class="card-header">
-                        <div class="card-icon">TEST</div>
-                        <div>
-                            <div class="card-title">Bilimingizni sinang</div>
-                            <div class="card-subtitle">AI sizga so'z beradi, siz belgini ko'rsating</div>
-                        </div>
-                    </div>
-
-                    <div class="video-container">
-                        <video id="quizVideo" autoplay playsinline></video>
-                        <canvas id="quizCanvas"></canvas>
-                    </div>
-
-                    <div class="controls">
-                        <button class="btn btn-primary" id="startQuiz">▶ Testni boshlash</button>
-                        <button class="btn btn-outline" id="skipQuiz" style="display: none;">O'tkazib yuborish
-                            ➔</button>
-                    </div>
+                    <div class="video-container"><video id="quizVideo" autoplay playsinline muted></video><canvas
+                            id="quizCanvas"></canvas></div>
+                    <button class="btn btn-primary" id="startQuiz" style="margin-top:1rem;">Testni boshlash</button>
                 </div>
-
                 <div class="card">
-                    <div class="card-header">
-                        <div class="card-icon">Q</div>
-                        <div>
-                            <div class="card-title">Savol</div>
-                            <div class="card-subtitle">Ushbu belgini ko'rsating:</div>
-                        </div>
-                    </div>
-
-                    <div class="translation-panel"
-                        style="background: rgba(0,210,255,0.1); border: 2px dashed #00d2ff; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 300px;">
-                        <div class="translation-text" id="targetSign" style="font-size: 3rem;">...</div>
-                        <div class="translation-desc" id="quizStatus" style="font-size: 1.2rem; color: #aaa;">Testni
-                            boshlang</div>
-
-                        <div id="scoreBoard" style="margin-top: 2rem; font-size: 1.5rem; font-weight: bold;">
-                            Ball: <span id="quizScore">0</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tarix paneli (Faqat tarjimon bo'limida ko'rinadi) -->
-        <div id="historySection">
-            <div class="history-panel">
-                <h3 style="margin-bottom: 1rem;">Tarix</h3>
-                <div id="historyList">
-                    <!-- History items -->
+                    <div class="translation-text" id="targetSign">...</div>
+                    <div id="scoreBoard">Ball: <span id="quizScore">0</span></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MediaPipe Libraries -->
+    <!-- Modals & Toasts -->
+    <div class="modal" id="settingsModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 2000; justify-content: center; align-items: center;">
+        <div class="card" style="width: 90%; max-width: 500px; background: #1e293b; padding: 2rem;">
+            <h2 style="margin-bottom: 2rem; color: var(--primary);">Sozlamalar</h2>
+            <div style="margin-bottom: 1rem;"><label>Ovoz tezligi</label><input type="range" id="speechRate" min="0.5"
+                    max="2" step="0.1" value="1" style="width: 100%;"></div>
+            <div style="margin-bottom: 1rem;"><label>Ovoz balandligi</label><input type="range" id="speechVolume"
+                    min="0" max="1" step="0.1" value="1" style="width: 100%;"></div>
+            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;"><label>Kamera Aks
+                    (Mirror)</label><input type="checkbox" id="mirrorMode" checked></div>
+            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;"><label>Skeletni
+                    ko'rsatish</label><input type="checkbox" id="showSkeleton" checked></div>
+            <div style="margin-bottom: 1rem; display: flex; justify-content: space-between;"><label>Tarixni
+                    saqlash</label><input type="checkbox" id="keepHistory" checked></div>
+            <button class="btn btn-primary" id="closeSettings" style="width: 100%; margin-top: 1rem;">Yopish</button>
+            <button class="btn btn-outline" id="resetData"
+                style="width: 100%; margin-top: 1rem; color: #ff4757; border: 1px solid #ff4757; background: transparent;">Tozalash</button>
+        </div>
+    </div>
+    <div id="toastContainer" style="position: fixed; bottom: 20px; right: 20px; z-index: 3000;"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
-    <!-- Settings Modal -->
-    <div class="modal" id="settingsModal">
-        <div class="modal-content">
-            <h2
-                style="margin-bottom: 2rem; background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
-                Sozlamalar</h2>
-
-            <div class="settings-row">
-                <span class="settings-label">Ovoz tezligi</span>
-                <input type="range" class="range-slider" id="speechRate" min="0.5" max="2" step="0.1" value="1">
-            </div>
-
-            <div class="settings-row">
-                <span class="settings-label">Ovoz balandligi</span>
-                <input type="range" class="range-slider" id="speechVolume" min="0" max="1" step="0.1" value="1">
-            </div>
-
-            <div class="settings-row">
-                <span class="settings-label">Kamera Mirror (Aks)</span>
-                <label class="switch">
-                    <input type="checkbox" id="mirrorMode" checked>
-                    <span class="slider-switch"></span>
-                </label>
-            </div>
-
-            <div class="settings-row">
-                <span class="settings-label">Skelet chiziqlari</span>
-                <label class="switch">
-                    <input type="checkbox" id="showSkeleton" checked>
-                    <span class="slider-switch"></span>
-                </label>
-            </div>
-
-            <div class="settings-row">
-                <span class="settings-label">Tarixni saqlash</span>
-                <label class="switch">
-                    <input type="checkbox" id="keepHistory" checked>
-                    <span class="slider-switch"></span>
-                </label>
-            </div>
-
-            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" id="closeSettings">Saqlash</button>
-            <button class="btn btn-outline" style="width: 100%; margin-top: 1rem; color: #ff4444;"
-                id="resetData">Ma'lumotlarni tozalash</button>
-        </div>
-    </div>
-
-    <div class="toast-container" id="toastContainer"></div>
     <script src="script.js"></script>
 </body>
 

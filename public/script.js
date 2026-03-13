@@ -50,12 +50,17 @@ const hands = new Hands({
 });
 hands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
 
-const deafVideo = document.getElementById('deafVideo');
-const deafCanvas = document.getElementById('deafCanvas');
-const deafCtx = deafCanvas.getContext('2d');
-const quizVideo = document.getElementById('quizVideo');
-const quizCanvas = document.getElementById('quizCanvas');
-const quizCtx = quizCanvas.getContext('2d');
+let deafVideo, deafCanvas, deafCtx, quizVideo, quizCanvas, quizCtx;
+
+function initDOMElements() {
+    deafVideo = document.getElementById('deafVideo');
+    deafCanvas = document.getElementById('deafCanvas');
+    if (deafCanvas) deafCtx = deafCanvas.getContext('2d');
+
+    quizVideo = document.getElementById('quizVideo');
+    quizCanvas = document.getElementById('quizCanvas');
+    if (quizCanvas) quizCtx = quizCanvas.getContext('2d');
+}
 
 hands.onResults((results) => {
     if (!isCameraRunning && !isQuizRunning) return;
@@ -190,6 +195,27 @@ const POSE_LIBRARY = {
     'b': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y - 0.2, z: 0 } : p),
     'o': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y - 0.05, z: 0 } : p),
     'l': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 4 || i === 8) ? { x: p.x, y: p.y - 0.2, z: 0 } : p),
+    's': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y + 0.1, z: 0 } : p),
+    'm': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i > 12 ? { x: p.x, y: p.y + 0.15, z: 0 } : p),
+    'n': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i > 8 ? { x: p.x, y: p.y + 0.15, z: 0 } : p),
+    'u': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: p.x, y: p.y - 0.3, z: 0 } : p),
+    'v': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: p.x + (i === 8 ? -0.1 : 0.1), y: p.y - 0.3, z: 0 } : p),
+    'd': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x, y: p.y - 0.4, z: 0 } : p),
+    'e': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y + 0.1, z: 0 } : p),
+    'f': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 8 ? { x: p.x, y: p.y - 0.3, z: 0 } : p),
+    'g': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x - 0.2, y: p.y - 0.3, z: 0 } : p),
+    'h': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: p.x - 0.3, y: p.y - 0.2, z: 0 } : p),
+    'i': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 20 ? { x: p.x, y: p.y - 0.4, z: 0 } : p),
+    'j': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 20 ? { x: p.x - 0.2, y: p.y - 0.4, z: 0 } : p),
+    'k': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: p.x + (i === 8 ? -0.1 : 0.1), y: p.y - 0.3, z: 0.1 } : p),
+    'p': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x, y: p.y - 0.3, z: 0 } : p),
+    'q': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 4 ? { x: p.x, y: p.y + 0.3, z: 0 } : p),
+    'r': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: 0.5, y: 0.4, z: 0 } : p),
+    't': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x, y: p.y + 0.1, z: 0 } : p),
+    'w': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 8 || i === 12 || i === 16) ? { x: p.x, y: p.y - 0.3, z: 0 } : p),
+    'x': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x, y: p.y - 0.1, z: 0.1 } : p),
+    'y': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => (i === 4 || i === 20) ? { x: p.x + (i === 4 ? -0.3 : 0.3), y: p.y - 0.3, z: 0 } : p),
+    'z': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i === 8 ? { x: p.x, y: p.y - 0.4, z: 0.1 } : p),
 };
 
 async function animateToPose(poseName, duration = 800) {
@@ -312,11 +338,21 @@ async function detectSign(multiHandLandmarks) {
     const ext = Object.values(f).filter(Boolean).length;
 
     let matched = '';
-    if (ext >= 4 && f.index && f.middle && f.ring && f.pinky) matched = 'salom';
-    else if (ext === 0) matched = 'rahmat';
-    else if (f.index && !f.middle && !f.ring && !f.pinky) matched = 'men';
-    else if (f.index && f.middle && !f.ring && !f.pinky) matched = 'ikki';
-    else if (f.thumb && f.pinky && !f.index && !f.middle && !f.ring) matched = 'telefon';
+    const allExt = ext >= 4 && f.thumb && f.index && f.middle && f.ring && f.pinky;
+
+    if (allExt) matched = 'salom';
+    else if (ext === 0 && !f.thumb) matched = 'rahmat';
+    else if (ext === 1 && f.index && !f.thumb) matched = 'men';
+    else if (ext === 1 && f.thumb && !f.index) matched = 'yaxshi';
+    else if (ext === 2 && f.index && f.middle && !f.ring) matched = 'ikki';
+    else if (ext === 3 && f.index && f.middle && f.ring && !f.pinky) matched = 'uch';
+    else if (ext === 4 && f.index && f.middle && f.ring && f.pinky && !f.thumb) matched = 'to\'rt';
+    else if (ext === 5) matched = 'salom';
+    else if (ext === 2 && f.thumb && f.pinky && !f.index) matched = 'telefon';
+    // 'OK' sign check: thumb and index touching (distance check)
+    if (!matched && f.thumb && f.index && !f.middle && !f.ring && !f.pinky) {
+        matched = 'yaxshi'; // fallback for OK as good
+    }
 
     if (matched) {
         if (progressEl) progressEl.style.display = 'block';
@@ -352,7 +388,6 @@ function displayDetectedSign(signKey, signData) {
     const translEl = document.getElementById('deafTranslation');
     const descEl = document.getElementById('deafDescription');
 
-    // Guard against missing properties
     const original = signData.original || signKey;
     const cleanTitle = original.split(/[(,[]/)[0].trim();
     const cleanDesc = (signData.description || 'Belgi aniqlandi').split('.')[0] + '.';
@@ -360,7 +395,7 @@ function displayDetectedSign(signKey, signData) {
     if (translEl) translEl.textContent = cleanTitle;
     if (descEl) descEl.textContent = cleanDesc;
 
-    speakText(cleanTitle);
+    // NO automatic speak here. User must press "Yuborish".
     getAIResponse(cleanTitle);
     addToHistory('imo-ishora', cleanTitle);
 }
@@ -390,7 +425,7 @@ async function getAIResponse(signName) {
         const data = await response.json();
         if (data.success) {
             aiTextEl.textContent = data.aiResponse;
-            speakText(data.aiResponse);
+            // Removed automatic speakText(data.aiResponse) to follow user's manual trigger request
             addToHistory('ai', data.aiResponse);
         } else {
             aiTextEl.textContent = 'AI javob bera olmadi.';
@@ -919,6 +954,7 @@ detectSign = async function (multiHandLandmarks) {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    initDOMElements(); // Critical: Load elements first
     init3DScene();
     loadDictionary();
 
@@ -939,8 +975,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sendBtn) {
         sendBtn.onclick = () => {
             const t = document.getElementById('deafTranslation').textContent;
+            const ai = document.getElementById('aiResponseText').textContent;
+
             if (t && t !== '...') {
-                speakText(t);
+                // Speak BOTH the sign name and the AI explanation for "full" understanding
+                speakText(`Tushunarli. Bu ${t}. ` + (ai !== 'Tayyorman! Harakatlarni ko\'rsating.' ? ai : ''));
                 showToast(`Yuborildi: ${t}`, 'success');
             } else {
                 showToast('Hali belgi aniqlanmadi', 'error');
