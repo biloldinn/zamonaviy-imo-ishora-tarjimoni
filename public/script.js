@@ -821,6 +821,15 @@ document.addEventListener('DOMContentLoaded', () => {
     init3DScene();
     loadDictionary();
 
+    // Voice test button
+    const testVoiceBtn = document.getElementById('testVoice');
+    if (testVoiceBtn) {
+        testVoiceBtn.addEventListener('click', () => {
+            speakText('Ovoz tizimi muvaffaqiyatli ishlamoqda.');
+            showToast('Ovoz sinab ko\'rildi! 🔊', 'success');
+        });
+    }
+
     // Initial greeting
-    setTimeout(() => speakText('Imo-ishora AI tizimi tayyor'), 1500);
+    setTimeout(() => speakText('Imo-ishora AI tayyor'), 1500);
 });
