@@ -72,6 +72,7 @@
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             letter-spacing: -1px;
         }
@@ -115,6 +116,52 @@
             max-width: 1400px;
             margin: 3rem auto;
             padding: 0 2rem;
+        }
+
+        /* Holographic Effects (Mukammal) */
+        .avatar-container {
+            position: relative;
+            background: radial-gradient(circle at center, rgba(0, 210, 255, 0.05) 0%, transparent 70%);
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .avatar-glow-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 2px solid rgba(0, 210, 255, 0.1);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(0, 210, 255, 0.1);
+            animation: pulse-ring 4s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                width: 280px;
+                height: 280px;
+                opacity: 0.3;
+            }
+
+            50% {
+                width: 320px;
+                height: 320px;
+                opacity: 0.1;
+            }
+
+            100% {
+                width: 280px;
+                height: 280px;
+                opacity: 0.3;
+            }
+        }
+
+        #hand3DContainer canvas {
+            filter: drop-shadow(0 0 10px rgba(0, 210, 255, 0.4));
         }
 
         .hero {
@@ -417,6 +464,12 @@
                     <div class="translation-text" id="deafTranslation">...</div>
                     <div class="translation-desc" id="deafDescription">Imo-ishorani ko'rsating</div>
 
+                    <div style="margin-top:1rem; display:flex; gap:10px;">
+                        <button class="btn btn-primary" id="sendSignToSpeech"
+                            style="flex:1; background:linear-gradient(135deg, #00b894, #00d2ff);">📤 Yuborish
+                            (Gapirtirish)</button>
+                    </div>
+
                     <div class="sign-display" id="deafSigns">
                         <!-- Signs will be injected here -->
                     </div>
@@ -496,6 +549,14 @@
                     </div>
                     <div class="translation-text" id="userSpeech" style="font-size: 1.2rem;">
                         ...
+                    </div>
+                </div>
+
+                <div class="card-footer" style="padding:1.5rem; background:rgba(255,255,255,0.02);">
+                    <div style="display:flex; gap:10px; margin-bottom:1rem;">
+                        <input type="text" id="manualSentenceInput" placeholder="Gapni yozing..."
+                            style="flex:1; padding:0.8rem 1.2rem; border-radius:10px; background:rgba(255,255,255,0.1); border:1px solid rgba(0,210,255,0.3); color:white; outline:none;">
+                        <button class="btn btn-primary" id="manualAnimateBtn">🎬 Ko'rsatish</button>
                     </div>
                 </div>
             </div>

@@ -25,6 +25,10 @@ let leftHandObj = { group: null, joints: [] };
 let rightHandObj = { group: null, joints: [] };
 let joints = []; // legacy reference
 
+// Animation State
+let isAnimatingHand = false;
+let animationQueue = [];
+
 // Storage
 const storage = {
     get: (key, def) => { try { return JSON.parse(localStorage.getItem(key)) || def; } catch { return def; } },
@@ -135,6 +139,7 @@ function init3DScene() {
 
 function update3DHand(results) {
     if (!threeScene || !results.multiHandLandmarks) return;
+    if (isAnimatingHand) return; // Don't interrupt animation
 
     leftHandObj.group.visible = false;
     rightHandObj.group.visible = false;
@@ -161,6 +166,102 @@ function update3DHand(results) {
             );
         });
     });
+}
+
+// ============================================================
+// 3D POSE ANIMATION (MUKAMMAL)
+// ============================================================
+const POSE_LIBRARY = {
+    'standby': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }),
+    'salom': [
+        { x: 0.5, y: 0.8, z: 0 }, { x: 0.4, y: 0.7, z: 0 }, { x: 0.35, y: 0.6, z: 0 }, { x: 0.3, y: 0.5, z: 0 }, { x: 0.25, y: 0.45, z: 0 },
+        { x: 0.45, y: 0.5, z: 0 }, { x: 0.45, y: 0.35, z: 0 }, { x: 0.45, y: 0.25, z: 0 }, { x: 0.45, y: 0.15, z: 0 },
+        { x: 0.5, y: 0.5, z: 0 }, { x: 0.5, y: 0.35, z: 0 }, { x: 0.5, y: 0.2, z: 0 }, { x: 0.5, y: 0.1, z: 0 },
+        { x: 0.55, y: 0.5, z: 0 }, { x: 0.55, y: 0.35, z: 0 }, { x: 0.55, y: 0.2, z: 0 }, { x: 0.55, y: 0.1, z: 0 },
+        { x: 0.6, y: 0.55, z: 0 }, { x: 0.6, y: 0.4, z: 0 }, { x: 0.6, y: 0.3, z: 0 }, { x: 0.6, y: 0.2, z: 0 }
+    ],
+    'rahmat': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y + 0.1, z: 0 } : p),
+    'men': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i === 8 ? { x: 0.5, y: 0.3, z: -0.2 } : p),
+    'yaxshi': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i === 4 ? { x: 0.5, y: 0.4, z: -0.1 } : p),
+    'ha': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y + 0.05, z: 0 } : p),
+    'yo\'q': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }).map((p, i) => (i === 8 || i === 12) ? { x: p.x, y: p.y - 0.2, z: 0 } : p),
+    // Basic Daktil (Finger Spelling) Templates
+    'a': Array(21).fill({ x: 0.5, y: 0.8, z: 0 }),
+    'b': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y - 0.2, z: 0 } : p),
+    'o': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => i > 4 ? { x: p.x, y: p.y - 0.05, z: 0 } : p),
+    'l': Array(21).fill({ x: 0.5, y: 0.7, z: 0 }).map((p, i) => (i === 4 || i === 8) ? { x: p.x, y: p.y - 0.2, z: 0 } : p),
+};
+
+async function animateToPose(poseName, duration = 800) {
+    const pose = POSE_LIBRARY[poseName] || POSE_LIBRARY['standby'];
+    isAnimatingHand = true;
+    rightHandObj.group.visible = true;
+    leftHandObj.group.visible = false;
+
+    const startPoses = rightHandObj.joints.map(j => j.position.clone());
+    const startTime = performance.now();
+
+    return new Promise(resolve => {
+        function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+            pose.forEach((target, i) => {
+                const tx = ((1 - target.x) - 0.5) * 12;
+                const ty = -(target.y - 0.5) * 12;
+                const tz = -target.z * 12;
+
+                rightHandObj.joints[i].position.x = THREE.MathUtils.lerp(startPoses[i].x, tx, ease);
+                rightHandObj.joints[i].position.y = THREE.MathUtils.lerp(startPoses[i].y, ty, ease);
+                rightHandObj.joints[i].position.z = THREE.MathUtils.lerp(startPoses[i].z, tz, ease);
+            });
+
+            // Update bones
+            rightHandObj.group.children.filter(c => c.userData.from !== undefined).forEach(cyl => {
+                const p1 = rightHandObj.joints[cyl.userData.from].position;
+                const p2 = rightHandObj.joints[cyl.userData.to].position;
+                cyl.position.copy(p1).lerp(p2, 0.5);
+                cyl.scale.set(1, p1.distanceTo(p2), 1);
+                cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), p2.clone().sub(p1).normalize());
+            });
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                resolve();
+            }
+        }
+        requestAnimationFrame(step);
+    });
+}
+
+async function playSentenceAnimation(text) {
+    if (isAnimatingHand) return;
+    const words = text.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    showToast(`${words.length} ta birlik ijro etilmoqda...`, 'info');
+
+    for (const word of words) {
+        let clean = word.replace(/[.,!?;:]/g, '');
+        if (!clean) continue;
+
+        if (POSE_LIBRARY[clean]) {
+            console.log('🎬 Playing full sign:', clean);
+            await animateToPose(clean, 1000);
+            await new Promise(r => setTimeout(r, 600));
+        } else {
+            console.log('🔤 Spelling word (Daktil):', clean);
+            for (const char of clean) {
+                const charPose = POSE_LIBRARY[char] || POSE_LIBRARY['standby'];
+                await animateToPose(char, 200); // Fast for spelling
+                await new Promise(r => setTimeout(r, 100));
+            }
+            await new Promise(r => setTimeout(r, 600));
+        }
+    }
+
+    isAnimatingHand = false;
+    setTimeout(() => { if (!isCameraRunning) rightHandObj.group.visible = false; }, 2000);
 }
 
 // ============================================================
@@ -832,4 +933,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial greeting
     setTimeout(() => speakText('Imo-ishora AI tayyor'), 1500);
+
+    // Manual triggers
+    const sendBtn = document.getElementById('sendSignToSpeech');
+    if (sendBtn) {
+        sendBtn.onclick = () => {
+            const t = document.getElementById('deafTranslation').textContent;
+            if (t && t !== '...') {
+                speakText(t);
+                showToast(`Yuborildi: ${t}`, 'success');
+            } else {
+                showToast('Hali belgi aniqlanmadi', 'error');
+            }
+        };
+    }
+
+    const animBtn = document.getElementById('manualAnimateBtn');
+    const animInput = document.getElementById('manualSentenceInput');
+    if (animBtn && animInput) {
+        animBtn.onclick = () => {
+            const val = animInput.value.trim();
+            if (val) {
+                playSentenceAnimation(val);
+                speakText(val);
+            } else {
+                showToast('Gap yozing', 'error');
+            }
+        };
+    }
 });
