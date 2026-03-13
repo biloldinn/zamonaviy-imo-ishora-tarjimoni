@@ -239,12 +239,18 @@ async function detectSign(multiHandLandmarks) {
 }
 
 function displayDetectedSign(signKey, signData) {
+    if (!signData) return;
     const translEl = document.getElementById('deafTranslation');
     const descEl = document.getElementById('deafDescription');
-    const cleanTitle = signData.original.split(/[(,[]/)[0].trim();
-    const cleanDesc = (signData.description || '').split('.')[0] + '.';
+
+    // Guard against missing properties
+    const original = signData.original || signKey;
+    const cleanTitle = original.split(/[(,[]/)[0].trim();
+    const cleanDesc = (signData.description || 'Belgi aniqlandi').split('.')[0] + '.';
+
     if (translEl) translEl.textContent = cleanTitle;
     if (descEl) descEl.textContent = cleanDesc;
+
     speakText(cleanTitle);
     getAIResponse(cleanTitle);
     addToHistory('imo-ishora', cleanTitle);
@@ -372,35 +378,47 @@ async function processVoiceToSign(text) {
 }
 
 // ============================================================
-// SPEECH (TTS) - Fixed for browser policy
+// SPEECH (TTS) - Enhanced Robustness
 // ============================================================
-let voicesReady = false;
-let pendingSpeak = null;
-
 function speakText(text) {
     if (!text || !window.speechSynthesis) return;
+
+    // Explicitly check for user interaction if needed, though most browsers allow it once started
     window.speechSynthesis.cancel();
 
     const doSpeak = () => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        const voices = window.speechSynthesis.getVoices();
-        let voice = voices.find(v => v.lang.startsWith('uz') || v.name.toLowerCase().includes('uzbek'))
-            || voices.find(v => v.lang.startsWith('tr'))
-            || voices.find(v => v.lang.startsWith('ru'))
-            || voices.find(v => v.default);
-        if (voice) utterance.voice = voice;
-        utterance.rate = (settings && settings.speechRate) || 0.9;
-        utterance.volume = (settings && settings.speechVolume) || 1.0;
-        utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
-        console.log('🔊 Speaking:', text);
+        try {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+
+            // Priority: Uzbek -> Turkish -> Russian -> English
+            let voice = voices.find(v => v.lang.startsWith('uz') || v.name.toLowerCase().includes('uzbek'))
+                || voices.find(v => v.lang.startsWith('tr'))
+                || voices.find(v => v.lang.startsWith('ru'))
+                || voices.find(v => v.lang.startsWith('en'))
+                || voices[0];
+
+            if (voice) {
+                utterance.voice = voice;
+                utterance.lang = voice.lang;
+            } else {
+                utterance.lang = 'uz-UZ';
+            }
+
+            utterance.rate = (settings && settings.speechRate) || 0.95;
+            utterance.volume = (settings && settings.speechVolume) || 1.0;
+            utterance.pitch = 1.0;
+
+            window.speechSynthesis.speak(utterance);
+            console.log('🔊 AI Ovoz:', text);
+        } catch (e) {
+            console.error('Speech error:', e);
+        }
     };
 
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
+    if (window.speechSynthesis.getVoices().length > 0) {
         doSpeak();
     } else {
-        // Wait for voices to load
         window.speechSynthesis.onvoiceschanged = () => {
             window.speechSynthesis.onvoiceschanged = null;
             doSpeak();
