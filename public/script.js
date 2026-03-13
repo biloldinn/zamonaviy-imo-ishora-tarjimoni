@@ -172,16 +172,24 @@ function getFingerStates(landmarks) {
     // Finger tips: 4 (thumb), 8 (index), 12 (middle), 16 (ring), 20 (pinky)
     // Finger PIPs: 3 (thumb), 6 (index), 10 (middle), 14 (ring), 18 (pinky)
     return {
-        // Thumb: check if tip is far from wrist (compared to PIP)
-        thumb: Math.hypot(landmarks[4].x - wrist.x, landmarks[4].y - wrist.y) >
-            Math.hypot(landmarks[2].x - wrist.x, landmarks[2].y - wrist.y) * 1.1,
-        // For other fingers: tip Y is above PIP Y (extended up)
-        index: landmarks[8].y < landmarks[6].y - 0.02,
-        middle: landmarks[12].y < landmarks[10].y - 0.02,
-        ring: landmarks[16].y < landmarks[14].y - 0.02,
-        pinky: landmarks[20].y < landmarks[18].y - 0.02
+        // Thumb: Check if tip is far from both MCP and PIP
+        thumb: Math.hypot(landmarks[4].x - landmarks[2].x, landmarks[4].y - landmarks[2].y) > 0.05,
+        // For other fingers: tip should be clearly higher than PIP (y decreases upwards)
+        index: landmarks[8].y < landmarks[6].y - 0.05,
+        middle: landmarks[12].y < landmarks[10].y - 0.05,
+        ring: landmarks[16].y < landmarks[14].y - 0.05,
+        pinky: landmarks[20].y < landmarks[18].y - 0.05
     };
 }
+
+// Fallback dictionary for common signs in case server fails
+const fallbackDictionary = {
+    'salom': { original: 'Salom', description: 'Assalomu alaykum!' },
+    'rahmat': { original: 'Rahmat', description: 'Tashakkur!' },
+    'men': { original: 'Men', description: 'Men o\'zim' },
+    'ikki': { original: 'Ikki', description: '2 soni' },
+    'telefon': { original: 'Telefon', description: 'Aloqa vositasi' }
+};
 
 const PROGRESS_LIMIT = 8; // Low threshold for fast detection
 let lastSignTime = 0;
@@ -219,7 +227,7 @@ async function detectSign(multiHandLandmarks) {
         if (progressText) progressText.textContent = Math.round(pct) + '%';
 
         if (signCount >= PROGRESS_LIMIT) {
-            const signData = signDictionary[matched];
+            const signData = signDictionary[matched] || fallbackDictionary[matched];
             const now = Date.now();
             if (signData && now - lastSignTime > SIGN_COOLDOWN_MS) {
                 lastSignTime = now;
@@ -229,7 +237,7 @@ async function detectSign(multiHandLandmarks) {
                 signCount = 0; lastSign = '';
                 if (progressEl) progressEl.style.display = 'none';
             } else {
-                signCount = 0; // Reset if sign is in cooldown
+                signCount = 0;
             }
         }
     } else {
